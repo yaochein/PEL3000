@@ -1,0 +1,1711 @@
+#include "scpiStruct.h"
+#include "scpiID.h"
+#include "scpiKeyword.h"
+#include "scpiNode.h"
+
+
+//Declare SonNodes
+const NODES _sonCommon[];
+const NODES _sonRoot[];
+const NODES _sonSYSTem[];
+const NODES _sonINPut[];
+const NODES _sonMEASure[];
+const NODES _sonCONFigure[];
+const NODES _sonGNG[];
+const NODES _sonCONFigureGNG[];
+const NODES _sonSTEP[];
+const NODES _sonCONFigureSTEP[];
+const NODES _sonEXTernal[];
+const NODES _sonCONFigureEXTernal[];
+const NODES _sonMODE[];
+const NODES _sonCURRent[];
+const NODES _sonRESistance[];
+const NODES _sonVOLTage[];
+const NODES _sonPOWer[];
+const NODES _sonPROGram[];
+const NODES _sonPROGramRECall[];
+const NODES _sonPROG[];
+const NODES _sonCHAin[];
+const NODES _sonPROGCHAin[];
+const NODES _sonCHAinRECall[];
+const NODES _sonPROGCHAinRECall[];
+const NODES _sonNSEQuence[];
+const NODES _sonNSEQuenceDELet[];
+const NODES _sonFSEQuence[];
+const NODES _sonFSEQuenceDELet[];
+const NODES _sonFSEQuenceEDIT[];
+const NODES _sonUTILity[];
+const NODES _sonMEMory[];
+const NODES _sonPRESet[];
+const NODES _sonSETup[];
+const NODES _sonFACTory[];
+const NODES _sonUSERdefault[];
+const NODES _sonUSER[];
+const NODES _sonSERial[];
+
+
+//Create Root Node
+const COMD_SUFFIX _cpNull = {-1, -1};
+//-----------------------------------------------------------------------------
+//--- NODE DATA ---------------------------------------------------------------
+//                       parant node   son nodes           name             COMD_SUFFIX          type          id
+const NODE _nodeCommon ={(NODES) 0  ,(NODES*)_sonCommon ,(COMD_WORD*) 0 ,(COMD_SUFFIX*)&_cpNull ,(char)T____ ,(unsigned int)0          };
+const NODE _nodeRoot   ={(NODES) 0  ,(NODES*)_sonRoot   ,(COMD_WORD*) 0 ,(COMD_SUFFIX*)&_cpNull ,(char)T____ ,(unsigned int)0          };
+
+
+//Create Common Nodes
+const NODE _node_CAL ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_CAL,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_CAL };
+const NODE _node_CLS ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_CLS,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_CLS };
+const NODE _node_ESE ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_ESE,(COMD_SUFFIX*)&_cpNull ,(char)T__QS,(unsigned int) _id_ESE };
+const NODE _node_ESR ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_ESR,(COMD_SUFFIX*)&_cpNull ,(char)T__Q_,(unsigned int) _id_ESR };
+const NODE _node_IDN ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_IDN,(COMD_SUFFIX*)&_cpNull ,(char)T__Q_,(unsigned int) _id_IDN };
+const NODE _node_OPC ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_OPC,(COMD_SUFFIX*)&_cpNull ,(char)T__QS,(unsigned int) _id_OPC };
+const NODE _node_RCL ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_RCL,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_RCL };
+const NODE _node_RST ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_RST,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_RST };
+const NODE _node_SAV ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_SAV,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_SAV };
+const NODE _node_SRE ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_SRE,(COMD_SUFFIX*)&_cpNull ,(char)T__QS,(unsigned int) _id_SRE };
+const NODE _node_STB ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_STB,(COMD_SUFFIX*)&_cpNull ,(char)T__Q_,(unsigned int) _id_STB };
+const NODE _node_TRG ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_TRG,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_TRG };
+const NODE _node_TST ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_TST,(COMD_SUFFIX*)&_cpNull ,(char)T__Q_,(unsigned int) _id_TST };
+const NODE _node_WAI ={(NODES)&_nodeRoot ,(NODES*)0   ,(COMD_WORD*)&_kw_WAI,(COMD_SUFFIX*)&_cpNull ,(char)T___S,(unsigned int) _id_WAI };
+
+
+const NODES _sonCommon[]={
+(NODES)&_node_CAL,(NODES)&_node_CLS,(NODES)&_node_ESE,(NODES)&_node_ESR,(NODES)&_node_IDN,
+(NODES)&_node_OPC,(NODES)&_node_RCL,(NODES)&_node_RST,(NODES)&_node_SAV,(NODES)&_node_SRE,
+(NODES)&_node_STB,(NODES)&_node_TRG,(NODES)&_node_TST,(NODES)&_node_WAI,(NODES) 0 };
+
+
+//Create Special Nodes
+const NODE _nodeABORt={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwABORt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idABORt};
+
+const NODE _nodeSYSTem={
+(NODES)&_nodeRoot ,(NODES*)_sonSYSTem,(COMD_WORD*)&_kwSYSTem
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeSYSTemERRor={
+(NODES)&_nodeSYSTem ,(NODES*)0,(COMD_WORD*)&_kwERRor
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idSYSTemERRor};
+
+const NODE _nodeINPut={
+(NODES)&_nodeRoot ,(NODES*)_sonINPut,(COMD_WORD*)&_kwINPut
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idINPut};
+
+const NODE _nodeSHORt={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwSHORt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idINPutSHORt};
+
+const NODE _nodeINPutSHORt={
+(NODES)&_nodeINPut ,(NODES*)0,(COMD_WORD*)&_kwSHORt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idINPutSHORt};
+
+const NODE _nodeINPutMODE={
+(NODES)&_nodeINPut ,(NODES*)0,(COMD_WORD*)&_kwMODE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idINPutMODE};
+
+const NODE _nodeMEASure={
+(NODES)&_nodeRoot ,(NODES*)_sonMEASure,(COMD_WORD*)&_kwMEASure
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeMEASureCURRent={
+(NODES)&_nodeMEASure ,(NODES*)0,(COMD_WORD*)&_kwCURRent
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMEASureCURRent};
+
+const NODE _nodeMEASureVOLTage={
+(NODES)&_nodeMEASure ,(NODES*)0,(COMD_WORD*)&_kwVOLTage
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMEASureVOLTage};
+
+const NODE _nodeMEASurePOWer={
+(NODES)&_nodeMEASure ,(NODES*)0,(COMD_WORD*)&_kwPOWer
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMEASurePOWer};
+
+const NODE _nodeMEASureETIMe={
+(NODES)&_nodeMEASure ,(NODES*)0,(COMD_WORD*)&_kwETIMe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMEASureETIMe};
+
+const NODE _nodeOCP={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwOCP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureOCP};
+
+const NODE _nodeCONFigure={
+(NODES)&_nodeRoot ,(NODES*)_sonCONFigure,(COMD_WORD*)&_kwCONFigure
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeCONFigureOCP={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwOCP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureOCP};
+
+const NODE _nodeOPP={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwOPP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureOPP};
+
+const NODE _nodeCONFigureOPP={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwOPP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureOPP};
+
+const NODE _nodeUVP={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwUVP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureUVP};
+
+const NODE _nodeCONFigureUVP={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwUVP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureUVP};
+
+const NODE _nodeOVP={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwOVP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureOVP};
+
+const NODE _nodeCONFigureOVP={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwOVP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureOVP};
+
+const NODE _nodeSSTart={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwSSTart
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSSTart};
+
+const NODE _nodeCONFigureSSTart={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwSSTart
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSSTart};
+
+const NODE _nodeVON={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwVON
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureVON};
+
+const NODE _nodeCONFigureVON={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwVON
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureVON};
+
+const NODE _nodeVDELay={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwVDELay
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureVDELay};
+
+const NODE _nodeCONFigureVDELay={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwVDELay
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureVDELay};
+
+const NODE _nodeCONFigureRESPonse={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwRESPonse
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureRESPonse};
+
+const NODE _nodeCNTime={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwCNTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureCNTime};
+
+const NODE _nodeCONFigureCNTime={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwCNTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureCNTime};
+
+const NODE _nodeCOTime={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwCOTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureCOTime};
+
+const NODE _nodeCONFigureCOTime={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwCOTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureCOTime};
+
+const NODE _nodeCRUNit={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwCRUNit
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureCRUNit};
+
+const NODE _nodeCONFigureCRUNit={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwCRUNit
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureCRUNit};
+
+const NODE _nodeCONFigureDYNamic={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwDYNamic
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureDYNamic};
+
+const NODE _nodeCONFigureMEMory={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwMEMory
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureMEMory};
+
+const NODE _nodeCONFigureSHORt={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwSHORt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSHORt};
+
+const NODE _nodeGNG={
+(NODES)&_nodeRoot ,(NODES*)_sonGNG,(COMD_WORD*)&_kwGNG
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGPASS};
+
+const NODE _nodeGNGSPECtest={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwSPECtest
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGSPECtest};
+
+const NODE _nodeCONFigureGNG={
+(NODES)&_nodeCONFigure ,(NODES*)_sonCONFigureGNG,(COMD_WORD*)&_kwGNG
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGPASS};
+
+const NODE _nodeCONFigureGNGSPECtest={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwSPECtest
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGSPECtest};
+
+const NODE _nodeGNGDTIMe={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwDTIMe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGDTIMe};
+
+const NODE _nodeCONFigureGNGDTIMe={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwDTIMe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGDTIMe};
+
+const NODE _nodeGNGMODE={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwMODE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGMODE};
+
+const NODE _nodeCONFigureGNGMODE={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwMODE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGMODE};
+
+const NODE _nodeGNGPASS={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwPASS
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGPASS};
+
+const NODE _nodeCONFigureGNGPASS={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwPASS
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGPASS};
+
+const NODE _nodeGNGH={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGH};
+
+const NODE _nodeCONFigureGNGH={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGH};
+
+const NODE _nodeGNGL={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGL};
+
+const NODE _nodeCONFigureGNGL={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGL};
+
+const NODE _nodeGNGC={
+(NODES)&_nodeGNG ,(NODES*)0,(COMD_WORD*)&_kwC
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGC};
+
+const NODE _nodeCONFigureGNGC={
+(NODES)&_nodeCONFigureGNG ,(NODES*)0,(COMD_WORD*)&_kwC
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureGNGC};
+
+const NODE _nodePARallel={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwPARallel
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigurePARallel};
+
+const NODE _nodeCONFigurePARallel={
+(NODES)&_nodeCONFigure ,(NODES*)0,(COMD_WORD*)&_kwPARallel
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigurePARallel};
+
+const NODE _nodeSTEP={
+(NODES)&_nodeRoot ,(NODES*)_sonSTEP,(COMD_WORD*)&_kwSTEP
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeSTEPCCH={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCCH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCCH};
+
+const NODE _nodeCONFigureSTEP={
+(NODES)&_nodeCONFigure ,(NODES*)_sonCONFigureSTEP,(COMD_WORD*)&_kwSTEP
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeCONFigureSTEPCCH={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCCH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCCH};
+
+const NODE _nodeSTEPCCM={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCCM
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCCM};
+
+const NODE _nodeCONFigureSTEPCCM={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCCM
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCCM};
+
+const NODE _nodeSTEPCCL={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCCL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCCL};
+
+const NODE _nodeCONFigureSTEPCCL={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCCL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCCL};
+
+const NODE _nodeSTEPCC={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCC
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCC};
+
+const NODE _nodeCONFigureSTEPCC={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCC
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCC};
+
+const NODE _nodeSTEPCRH={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCRH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCRH};
+
+const NODE _nodeCONFigureSTEPCRH={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCRH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCRH};
+
+const NODE _nodeSTEPCRM={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCRM
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCRM};
+
+const NODE _nodeCONFigureSTEPCRM={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCRM
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCRM};
+
+const NODE _nodeSTEPCRL={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCRL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCRL};
+
+const NODE _nodeCONFigureSTEPCRL={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCRL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCRL};
+
+const NODE _nodeSTEPCR={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCR
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCR};
+
+const NODE _nodeCONFigureSTEPCR={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCR
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCR};
+
+const NODE _nodeSTEPCVH={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCVH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCVH};
+
+const NODE _nodeCONFigureSTEPCVH={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCVH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCVH};
+
+const NODE _nodeSTEPCVL={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCVL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCVL};
+
+const NODE _nodeCONFigureSTEPCVL={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCVL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCVL};
+
+const NODE _nodeSTEPCV={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCV
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCV};
+
+const NODE _nodeCONFigureSTEPCV={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCV
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCV};
+
+const NODE _nodeSTEPCPH={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCPH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCPH};
+
+const NODE _nodeCONFigureSTEPCPH={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCPH
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCPH};
+
+const NODE _nodeSTEPCPM={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCPM
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCPM};
+
+const NODE _nodeCONFigureSTEPCPM={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCPM
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCPM};
+
+const NODE _nodeSTEPCPL={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCPL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCPL};
+
+const NODE _nodeCONFigureSTEPCPL={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCPL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCPL};
+
+const NODE _nodeSTEPCP={
+(NODES)&_nodeSTEP ,(NODES*)0,(COMD_WORD*)&_kwCP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCP};
+
+const NODE _nodeCONFigureSTEPCP={
+(NODES)&_nodeCONFigureSTEP ,(NODES*)0,(COMD_WORD*)&_kwCP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureSTEPCP};
+
+const NODE _nodeEXTernal={
+(NODES)&_nodeRoot ,(NODES*)_sonEXTernal,(COMD_WORD*)&_kwEXTernal
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalCONTrol};
+
+const NODE _nodeEXTernalCONTrol={
+(NODES)&_nodeEXTernal ,(NODES*)0,(COMD_WORD*)&_kwCONTrol
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalCONTrol};
+
+const NODE _nodeCONFigureEXTernal={
+(NODES)&_nodeCONFigure ,(NODES*)_sonCONFigureEXTernal,(COMD_WORD*)&_kwEXTernal
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalCONTrol};
+
+const NODE _nodeCONFigureEXTernalCONTrol={
+(NODES)&_nodeCONFigureEXTernal ,(NODES*)0,(COMD_WORD*)&_kwCONTrol
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalCONTrol};
+
+const NODE _nodeEXTernalLOADonin={
+(NODES)&_nodeEXTernal ,(NODES*)0,(COMD_WORD*)&_kwLOADonin
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalLOADonin};
+
+const NODE _nodeCONFigureEXTernalLOADonin={
+(NODES)&_nodeCONFigureEXTernal ,(NODES*)0,(COMD_WORD*)&_kwLOADonin
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalLOADonin};
+
+const NODE _nodeEXTernalSYNC={
+(NODES)&_nodeEXTernal ,(NODES*)0,(COMD_WORD*)&_kwSYNC
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalSYNC};
+
+const NODE _nodeCONFigureEXTernalSYNC={
+(NODES)&_nodeCONFigureEXTernal ,(NODES*)0,(COMD_WORD*)&_kwSYNC
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCONFigureEXTernalSYNC};
+
+const NODE _nodeMODE={
+(NODES)&_nodeRoot ,(NODES*)_sonMODE,(COMD_WORD*)&_kwMODE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODE};
+
+const NODE _nodeCRANge={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwCRANge
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODECRANge};
+
+const NODE _nodeMODECRANge={
+(NODES)&_nodeMODE ,(NODES*)0,(COMD_WORD*)&_kwCRANge
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODECRANge};
+
+const NODE _nodeVRANge={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwVRANge
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODEVRANge};
+
+const NODE _nodeMODEVRANge={
+(NODES)&_nodeMODE ,(NODES*)0,(COMD_WORD*)&_kwVRANge
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODEVRANge};
+
+const NODE _nodeDYNamic={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwDYNamic
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODEDYNamic};
+
+const NODE _nodeMODEDYNamic={
+(NODES)&_nodeMODE ,(NODES*)0,(COMD_WORD*)&_kwDYNamic
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODEDYNamic};
+
+const NODE _nodeRESPonse={
+(NODES)&_nodeRoot ,(NODES*)0,(COMD_WORD*)&_kwRESPonse
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODERESPonse};
+
+const NODE _nodeMODERESPonse={
+(NODES)&_nodeMODE ,(NODES*)0,(COMD_WORD*)&_kwRESPonse
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMODERESPonse};
+
+const NODE _nodeCURRent={
+(NODES)&_nodeRoot ,(NODES*)_sonCURRent,(COMD_WORD*)&_kwCURRent
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentVA};
+
+const NODE _nodeCURRentVA={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwVA
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentVA};
+
+const NODE _nodeCURRentVB={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwVB
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentVB};
+
+const NODE _nodeCURRentSRATe={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwSRATe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentSRATe};
+
+const NODE _nodeCURRentL1={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwL1
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentL1};
+
+const NODE _nodeCURRentL2={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwL2
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentL2};
+
+const NODE _nodeCURRentSET={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwSET
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentSET};
+
+const NODE _nodeCURRentLEVel={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwLEVel
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentLEVel};
+
+const NODE _nodeCURRentRISE={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwRISE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentRISE};
+
+const NODE _nodeCURRentFALL={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwFALL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentFALL};
+
+const NODE _nodeCURRentT1={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwT1
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentT1};
+
+const NODE _nodeCURRentT2={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwT2
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentT2};
+
+const NODE _nodeCURRentFREQuency={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwFREQuency
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentFREQuency};
+
+const NODE _nodeCURRentDUTY={
+(NODES)&_nodeCURRent ,(NODES*)0,(COMD_WORD*)&_kwDUTY
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idCURRentDUTY};
+
+const NODE _nodeRESistance={
+(NODES)&_nodeRoot ,(NODES*)_sonRESistance,(COMD_WORD*)&_kwRESistance
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceVA};
+
+const NODE _nodeRESistanceVA={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwVA
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceVA};
+
+const NODE _nodeRESistanceVB={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwVB
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceVB};
+
+const NODE _nodeRESistanceSRATe={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwSRATe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceSRATe};
+
+const NODE _nodeRESistanceL1={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwL1
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceL1};
+
+const NODE _nodeRESistanceL2={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwL2
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceL2};
+
+const NODE _nodeRESistanceSET={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwSET
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceSET};
+
+const NODE _nodeRESistanceLEVel={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwLEVel
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceLEVel};
+
+const NODE _nodeRESistanceRISE={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwRISE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceRISE};
+
+const NODE _nodeRESistanceFALL={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwFALL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceFALL};
+
+const NODE _nodeRESistanceT1={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwT1
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceT1};
+
+const NODE _nodeRESistanceT2={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwT2
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceT2};
+
+const NODE _nodeRESistanceFREQuency={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwFREQuency
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceFREQuency};
+
+const NODE _nodeRESistanceDUTY={
+(NODES)&_nodeRESistance ,(NODES*)0,(COMD_WORD*)&_kwDUTY
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idRESistanceDUTY};
+
+const NODE _nodeVOLTage={
+(NODES)&_nodeRoot ,(NODES*)_sonVOLTage,(COMD_WORD*)&_kwVOLTage
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idVOLTageVA};
+
+const NODE _nodeVOLTageVA={
+(NODES)&_nodeVOLTage ,(NODES*)0,(COMD_WORD*)&_kwVA
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idVOLTageVA};
+
+const NODE _nodeVOLTageVB={
+(NODES)&_nodeVOLTage ,(NODES*)0,(COMD_WORD*)&_kwVB
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idVOLTageVB};
+
+const NODE _nodePOWer={
+(NODES)&_nodeRoot ,(NODES*)_sonPOWer,(COMD_WORD*)&_kwPOWer
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerVA};
+
+const NODE _nodePOWerVA={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwVA
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerVA};
+
+const NODE _nodePOWerVB={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwVB
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerVB};
+
+const NODE _nodePOWerL1={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwL1
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerL1};
+
+const NODE _nodePOWerL2={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwL2
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerL2};
+
+const NODE _nodePOWerSET={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwSET
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerSET};
+
+const NODE _nodePOWerLEVel={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwLEVel
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerLEVel};
+
+const NODE _nodePOWerT1={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwT1
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerT1};
+
+const NODE _nodePOWerT2={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwT2
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerT2};
+
+const NODE _nodePOWerFREQuency={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwFREQuency
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerFREQuency};
+
+const NODE _nodePOWerDUTY={
+(NODES)&_nodePOWer ,(NODES*)0,(COMD_WORD*)&_kwDUTY
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPOWerDUTY};
+
+const NODE _nodePROGram={
+(NODES)&_nodeRoot ,(NODES*)_sonPROGram,(COMD_WORD*)&_kwPROGram
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGram};
+
+const NODE _nodePROGramSTATe={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwSTATe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramSTATe};
+
+const NODE _nodePROGramRECall={
+(NODES)&_nodePROGram ,(NODES*)_sonPROGramRECall,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodePROGramRECallDEFault={
+(NODES)&_nodePROGramRECall ,(NODES*)0,(COMD_WORD*)&_kwDEFault
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramRECallDEFault};
+
+const NODE _nodePROGramDEFault={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwDEFault
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramRECallDEFault};
+
+const NODE _nodePROGramSTARt={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwSTARt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramSTARt};
+
+const NODE _nodePROGramSTEP={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwSTEP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramSTEP};
+
+const NODE _nodePROGramMEMory={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwMEMory
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramMEMory};
+
+const NODE _nodePROGramRUN={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwRUN
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramRUN};
+
+const NODE _nodePROG={
+(NODES)&_nodeRoot ,(NODES*)_sonPROG,(COMD_WORD*)&_kwPROG
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodePROGONTime={
+(NODES)&_nodePROG ,(NODES*)0,(COMD_WORD*)&_kwONTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGONTime};
+
+const NODE _nodePROGramOFFTime={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwOFFTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramOFFTime};
+
+const NODE _nodePROGramPFTime={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwPFTime
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramPFTime};
+
+const NODE _nodePROGramSTIMe={
+(NODES)&_nodePROGram ,(NODES*)0,(COMD_WORD*)&_kwSTIMe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGramSTIMe};
+
+const NODE _nodeCHAin={
+(NODES)&_nodeRoot ,(NODES*)_sonCHAin,(COMD_WORD*)&_kwCHAin
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAin};
+
+const NODE _nodeCHAinSTARt={
+(NODES)&_nodeCHAin ,(NODES*)0,(COMD_WORD*)&_kwSTARt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinSTARt};
+
+const NODE _nodePROGCHAin={
+(NODES)&_nodePROG ,(NODES*)_sonPROGCHAin,(COMD_WORD*)&_kwCHAin
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAin};
+
+const NODE _nodePROGCHAinSTARt={
+(NODES)&_nodePROGCHAin ,(NODES*)0,(COMD_WORD*)&_kwSTARt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinSTARt};
+
+const NODE _nodeCHAinP2P={
+(NODES)&_nodeCHAin ,(NODES*)0,(COMD_WORD*)&_kwP2P
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinP2P};
+
+const NODE _nodePROGCHAinP2P={
+(NODES)&_nodePROGCHAin ,(NODES*)0,(COMD_WORD*)&_kwP2P
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinP2P};
+
+const NODE _nodeCHAinRECall={
+(NODES)&_nodeCHAin ,(NODES*)_sonCHAinRECall,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeCHAinRECallDEFault={
+(NODES)&_nodeCHAinRECall ,(NODES*)0,(COMD_WORD*)&_kwDEFault
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinRECallDEFault};
+
+const NODE _nodePROGCHAinRECall={
+(NODES)&_nodePROGCHAin ,(NODES*)_sonPROGCHAinRECall,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodePROGCHAinRECallDEFault={
+(NODES)&_nodePROGCHAinRECall ,(NODES*)0,(COMD_WORD*)&_kwDEFault
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinRECallDEFault};
+
+const NODE _nodePROGCHAinDEFault={
+(NODES)&_nodePROGCHAin ,(NODES*)0,(COMD_WORD*)&_kwDEFault
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinRECallDEFault};
+
+const NODE _nodeCHAinDEFault={
+(NODES)&_nodeCHAin ,(NODES*)0,(COMD_WORD*)&_kwDEFault
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGCHAinRECallDEFault};
+
+const NODE _nodePROGSAVE={
+(NODES)&_nodePROG ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPROGSAVE};
+
+const NODE _nodeNSEQuence={
+(NODES)&_nodeRoot ,(NODES*)_sonNSEQuence,(COMD_WORD*)&_kwNSEQuence
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuence};
+
+const NODE _nodeNSEQuenceSTATe={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwSTATe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceSTATe};
+
+const NODE _nodeNSEQuenceSTARt={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwSTARt
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceSTARt};
+
+const NODE _nodeNSEQuenceNUMBer={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwNUMBer
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceNUMBer};
+
+const NODE _nodeNSEQuenceMEMO={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwMEMO
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceMEMO};
+
+const NODE _nodeNSEQuenceMODE={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwMODE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceMODE};
+
+const NODE _nodeNSEQuenceRANGe={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwRANGe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceRANGe};
+
+const NODE _nodeNSEQuenceLOOP={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwLOOP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceLOOP};
+
+const NODE _nodeNSEQuenceLLOad={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwLLOad
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceLLOad};
+
+const NODE _nodeNSEQuenceLAST={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwLAST
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceLAST};
+
+const NODE _nodeNSEQuenceCHAin={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwCHAin
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceCHAin};
+
+const NODE _nodeNSEQuenceEDIT={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwEDIT
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceEDIT};
+
+const NODE _nodeNSEQuenceDELet={
+(NODES)&_nodeNSEQuence ,(NODES*)_sonNSEQuenceDELet,(COMD_WORD*)&_kwDELet
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeNSEQuenceDELetALL={
+(NODES)&_nodeNSEQuenceDELet ,(NODES*)0,(COMD_WORD*)&_kwALL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceDELetALL};
+
+const NODE _nodeNSEQuenceALL={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwALL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceDELetALL};
+
+const NODE _nodeNSEQuenceSAVE={
+(NODES)&_nodeNSEQuence ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idNSEQuenceSAVE};
+
+const NODE _nodeFSEQuence={
+(NODES)&_nodeRoot ,(NODES*)_sonFSEQuence,(COMD_WORD*)&_kwFSEQuence
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuence};
+
+const NODE _nodeFSEQuenceSTATe={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwSTATe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceSTATe};
+
+const NODE _nodeFSEQuenceMEMO={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwMEMO
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceMEMO};
+
+const NODE _nodeFSEQuenceMODE={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwMODE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceMODE};
+
+const NODE _nodeFSEQuenceRANGe={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwRANGe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceRANGe};
+
+const NODE _nodeFSEQuenceLOOP={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwLOOP
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceLOOP};
+
+const NODE _nodeFSEQuenceTBASe={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwTBASe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceTBASe};
+
+const NODE _nodeFSEQuenceLLOad={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwLLOad
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceLLOad};
+
+const NODE _nodeFSEQuenceLAST={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwLAST
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceLAST};
+
+const NODE _nodeFSEQuenceRPTStep={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwRPTStep
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceRPTStep};
+
+const NODE _nodeFSEQuenceEDIT={
+(NODES)&_nodeFSEQuence ,(NODES*)_sonFSEQuenceEDIT,(COMD_WORD*)&_kwEDIT
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceEDIT};
+
+const NODE _nodeFSEQuenceDELet={
+(NODES)&_nodeFSEQuence ,(NODES*)_sonFSEQuenceDELet,(COMD_WORD*)&_kwDELet
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeFSEQuenceDELetALL={
+(NODES)&_nodeFSEQuenceDELet ,(NODES*)0,(COMD_WORD*)&_kwALL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceDELetALL};
+
+const NODE _nodeFSEQuenceALL={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwALL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceDELetALL};
+
+const NODE _nodeFSEQuenceEDITFILL={
+(NODES)&_nodeFSEQuenceEDIT ,(NODES*)0,(COMD_WORD*)&_kwFILL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceEDITFILL};
+
+const NODE _nodeFSEQuenceFILL={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwFILL
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceEDITFILL};
+
+const NODE _nodeFSEQuenceSAVE={
+(NODES)&_nodeFSEQuence ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFSEQuenceSAVE};
+
+const NODE _nodeUTILity={
+(NODES)&_nodeRoot ,(NODES*)_sonUTILity,(COMD_WORD*)&_kwUTILity
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeUTILitySYSTem={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwSYSTem
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILitySYSTem};
+
+const NODE _nodeUTILityLOAD={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwLOAD
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityLOAD};
+
+const NODE _nodeUTILityINTerface={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwINTerface
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityINTerface};
+
+const NODE _nodeUTILityBRATe={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwBRATe
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityBRATe};
+
+const NODE _nodeUTILitySBIT={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwSBIT
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILitySBIT};
+
+const NODE _nodeUTILityPARity={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwPARity
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityPARity};
+
+const NODE _nodeUTILityTIME={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwTIME
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityTIME};
+
+const NODE _nodeUTILityKNOB={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwKNOB
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityKNOB};
+
+const NODE _nodeUTILitySPEaker={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwSPEaker
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILitySPEaker};
+
+const NODE _nodeUTILityALARm={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwALARm
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityALARm};
+
+const NODE _nodeUTILityUNReg={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwUNReg
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityUNReg};
+
+const NODE _nodeUTILityGNG={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwGNG
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityGNG};
+
+const NODE _nodeUTILityCONTrast={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwCONTrast
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityCONTrast};
+
+const NODE _nodeUTILityBRIGhtness={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwBRIGhtness
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityBRIGhtness};
+
+const NODE _nodeUTILityLANGuage={
+(NODES)&_nodeUTILity ,(NODES*)0,(COMD_WORD*)&_kwLANGuage
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUTILityLANGuage};
+
+const NODE _nodeMEMory={
+(NODES)&_nodeRoot ,(NODES*)_sonMEMory,(COMD_WORD*)&_kwMEMory
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeMEMorySAVE={
+(NODES)&_nodeMEMory ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMEMorySAVE};
+
+const NODE _nodeMEMoryRECall={
+(NODES)&_nodeMEMory ,(NODES*)0,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idMEMoryRECall};
+
+const NODE _nodePRESet={
+(NODES)&_nodeRoot ,(NODES*)_sonPRESet,(COMD_WORD*)&_kwPRESet
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodePRESetSAVE={
+(NODES)&_nodePRESet ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPRESetSAVE};
+
+const NODE _nodePRESetRECall={
+(NODES)&_nodePRESet ,(NODES*)0,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idPRESetRECall};
+
+const NODE _nodeSETup={
+(NODES)&_nodeRoot ,(NODES*)_sonSETup,(COMD_WORD*)&_kwSETup
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeSETupSAVE={
+(NODES)&_nodeSETup ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idSETupSAVE};
+
+const NODE _nodeSETupRECall={
+(NODES)&_nodeSETup ,(NODES*)0,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idSETupRECall};
+
+const NODE _nodeFACTory={
+(NODES)&_nodeRoot ,(NODES*)_sonFACTory,(COMD_WORD*)&_kwFACTory
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFACToryRECall};
+
+const NODE _nodeFACToryRECall={
+(NODES)&_nodeFACTory ,(NODES*)0,(COMD_WORD*)&_kwRECall
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idFACToryRECall};
+
+const NODE _nodeUSERdefault={
+(NODES)&_nodeRoot ,(NODES*)_sonUSERdefault,(COMD_WORD*)&_kwUSERdefault
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeUSERdefaultSAVE={
+(NODES)&_nodeUSERdefault ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUSERdefaultSAVE};
+
+const NODE _nodeUSER={
+(NODES)&_nodeRoot ,(NODES*)_sonUSER,(COMD_WORD*)&_kwUSER
+,(COMD_SUFFIX*)&_cpNull,(char)T____,(unsigned int)0};
+
+const NODE _nodeUSERSAVE={
+(NODES)&_nodeUSER ,(NODES*)0,(COMD_WORD*)&_kwSAVE
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idUSERDEFaultSAVE};
+
+const NODE _nodeSERial={
+(NODES)&_nodeRoot ,(NODES*)_sonSERial,(COMD_WORD*)&_kwSERial
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idSERialMASTer};
+
+const NODE _nodeSERialMASTer={
+(NODES)&_nodeSERial ,(NODES*)0,(COMD_WORD*)&_kwMASTer
+,(COMD_SUFFIX*)&_cpNull,(char)T__QS,(unsigned int)_idSERialMASTer};
+
+//Create sonRoot
+const NODES _sonRoot[]={
+(NODES)&_nodeABORt,(NODES)&_nodeSYSTem,(NODES)&_nodeINPut,(NODES)&_nodeSHORt,(NODES)&_nodeMEASure,
+(NODES)&_nodeOCP,(NODES)&_nodeCONFigure,(NODES)&_nodeOPP,(NODES)&_nodeUVP,(NODES)&_nodeOVP,
+(NODES)&_nodeSSTart,(NODES)&_nodeVON,(NODES)&_nodeVDELay,(NODES)&_nodeCNTime,(NODES)&_nodeCOTime,
+(NODES)&_nodeCRUNit,(NODES)&_nodeGNG,(NODES)&_nodePARallel,(NODES)&_nodeSTEP,(NODES)&_nodeEXTernal,
+(NODES)&_nodeMODE,(NODES)&_nodeCRANge,(NODES)&_nodeVRANge,(NODES)&_nodeDYNamic,(NODES)&_nodeRESPonse,
+(NODES)&_nodeCURRent,(NODES)&_nodeRESistance,(NODES)&_nodeVOLTage,(NODES)&_nodePOWer,(NODES)&_nodePROGram,
+(NODES)&_nodePROG,(NODES)&_nodeCHAin,(NODES)&_nodeNSEQuence,(NODES)&_nodeFSEQuence,(NODES)&_nodeUTILity,
+(NODES)&_nodeMEMory,(NODES)&_nodePRESet,(NODES)&_nodeSETup,(NODES)&_nodeFACTory,(NODES)&_nodeUSERdefault,
+(NODES)&_nodeUSER,(NODES)&_nodeSERial,(NODES) 0 };
+
+
+//Create sonNodes
+const NODES _sonSYSTem[]={
+(NODES)&_nodeSYSTemERRor,
+(NODES) 0 };
+
+const NODES _sonINPut[]={
+(NODES)&_nodeINPutSHORt,
+(NODES)&_nodeINPutMODE,
+(NODES) 0 };
+
+const NODES _sonMEASure[]={
+(NODES)&_nodeMEASureCURRent,
+(NODES)&_nodeMEASureVOLTage,
+(NODES)&_nodeMEASurePOWer,
+(NODES)&_nodeMEASureETIMe,
+(NODES) 0 };
+
+const NODES _sonCONFigure[]={
+(NODES)&_nodeCONFigureOCP,
+(NODES)&_nodeCONFigureOPP,
+(NODES)&_nodeCONFigureUVP,
+(NODES)&_nodeCONFigureOVP,
+(NODES)&_nodeCONFigureSSTart,
+(NODES)&_nodeCONFigureVON,
+(NODES)&_nodeCONFigureVDELay,
+(NODES)&_nodeCONFigureRESPonse,
+(NODES)&_nodeCONFigureCNTime,
+(NODES)&_nodeCONFigureCOTime,
+(NODES)&_nodeCONFigureCRUNit,
+(NODES)&_nodeCONFigureDYNamic,
+(NODES)&_nodeCONFigureMEMory,
+(NODES)&_nodeCONFigureSHORt,
+(NODES)&_nodeCONFigureGNG,
+(NODES)&_nodeCONFigurePARallel,
+(NODES)&_nodeCONFigureSTEP,
+(NODES)&_nodeCONFigureEXTernal,
+(NODES) 0 };
+
+const NODES _sonGNG[]={
+(NODES)&_nodeGNGSPECtest,
+(NODES)&_nodeGNGDTIMe,
+(NODES)&_nodeGNGMODE,
+(NODES)&_nodeGNGPASS,
+(NODES)&_nodeGNGH,
+(NODES)&_nodeGNGL,
+(NODES)&_nodeGNGC,
+(NODES) 0 };
+
+const NODES _sonCONFigureGNG[]={
+(NODES)&_nodeCONFigureGNGSPECtest,
+(NODES)&_nodeCONFigureGNGDTIMe,
+(NODES)&_nodeCONFigureGNGMODE,
+(NODES)&_nodeCONFigureGNGPASS,
+(NODES)&_nodeCONFigureGNGH,
+(NODES)&_nodeCONFigureGNGL,
+(NODES) 0 };
+
+const NODES _sonSTEP[]={
+(NODES)&_nodeSTEPCCH,
+(NODES)&_nodeSTEPCCM,
+(NODES)&_nodeSTEPCCL,
+(NODES)&_nodeSTEPCC,
+(NODES)&_nodeSTEPCRH,
+(NODES)&_nodeSTEPCRM,
+(NODES)&_nodeSTEPCRL,
+(NODES)&_nodeSTEPCR,
+(NODES)&_nodeSTEPCVH,
+(NODES)&_nodeSTEPCVL,
+(NODES)&_nodeSTEPCV,
+(NODES)&_nodeSTEPCPH,
+(NODES)&_nodeSTEPCPM,
+(NODES)&_nodeSTEPCPL,
+(NODES)&_nodeSTEPCP,
+(NODES) 0 };
+
+const NODES _sonCONFigureSTEP[]={
+(NODES)&_nodeCONFigureSTEPCCH,
+(NODES)&_nodeCONFigureSTEPCCM,
+(NODES)&_nodeCONFigureSTEPCCL,
+(NODES)&_nodeCONFigureSTEPCC,
+(NODES)&_nodeCONFigureSTEPCRH,
+(NODES)&_nodeCONFigureSTEPCRM,
+(NODES)&_nodeCONFigureSTEPCRL,
+(NODES)&_nodeCONFigureSTEPCR,
+(NODES)&_nodeCONFigureSTEPCVH,
+(NODES)&_nodeCONFigureSTEPCVL,
+(NODES)&_nodeCONFigureSTEPCV,
+(NODES)&_nodeCONFigureSTEPCPH,
+(NODES)&_nodeCONFigureSTEPCPM,
+(NODES)&_nodeCONFigureSTEPCPL,
+(NODES)&_nodeCONFigureSTEPCP,
+(NODES) 0 };
+
+const NODES _sonEXTernal[]={
+(NODES)&_nodeEXTernalCONTrol,
+(NODES)&_nodeEXTernalLOADonin,
+(NODES)&_nodeEXTernalSYNC,
+(NODES) 0 };
+
+const NODES _sonCONFigureEXTernal[]={
+(NODES)&_nodeCONFigureEXTernalCONTrol,
+(NODES)&_nodeCONFigureEXTernalLOADonin,
+(NODES)&_nodeCONFigureEXTernalSYNC,
+(NODES) 0 };
+
+const NODES _sonMODE[]={
+(NODES)&_nodeMODECRANge,
+(NODES)&_nodeMODEVRANge,
+(NODES)&_nodeMODEDYNamic,
+(NODES)&_nodeMODERESPonse,
+(NODES) 0 };
+
+const NODES _sonCURRent[]={
+(NODES)&_nodeCURRentVA,
+(NODES)&_nodeCURRentVB,
+(NODES)&_nodeCURRentSRATe,
+(NODES)&_nodeCURRentL1,
+(NODES)&_nodeCURRentL2,
+(NODES)&_nodeCURRentSET,
+(NODES)&_nodeCURRentLEVel,
+(NODES)&_nodeCURRentRISE,
+(NODES)&_nodeCURRentFALL,
+(NODES)&_nodeCURRentT1,
+(NODES)&_nodeCURRentT2,
+(NODES)&_nodeCURRentFREQuency,
+(NODES)&_nodeCURRentDUTY,
+(NODES) 0 };
+
+const NODES _sonRESistance[]={
+(NODES)&_nodeRESistanceVA,
+(NODES)&_nodeRESistanceVB,
+(NODES)&_nodeRESistanceSRATe,
+(NODES)&_nodeRESistanceL1,
+(NODES)&_nodeRESistanceL2,
+(NODES)&_nodeRESistanceSET,
+(NODES)&_nodeRESistanceLEVel,
+(NODES)&_nodeRESistanceRISE,
+(NODES)&_nodeRESistanceFALL,
+(NODES)&_nodeRESistanceT1,
+(NODES)&_nodeRESistanceT2,
+(NODES)&_nodeRESistanceFREQuency,
+(NODES)&_nodeRESistanceDUTY,
+(NODES) 0 };
+
+const NODES _sonVOLTage[]={
+(NODES)&_nodeVOLTageVA,
+(NODES)&_nodeVOLTageVB,
+(NODES) 0 };
+
+const NODES _sonPOWer[]={
+(NODES)&_nodePOWerVA,
+(NODES)&_nodePOWerVB,
+(NODES)&_nodePOWerL1,
+(NODES)&_nodePOWerL2,
+(NODES)&_nodePOWerSET,
+(NODES)&_nodePOWerLEVel,
+(NODES)&_nodePOWerT1,
+(NODES)&_nodePOWerT2,
+(NODES)&_nodePOWerFREQuency,
+(NODES)&_nodePOWerDUTY,
+(NODES) 0 };
+
+const NODES _sonPROGram[]={
+(NODES)&_nodePROGramSTATe,
+(NODES)&_nodePROGramRECall,
+(NODES)&_nodePROGramDEFault,
+(NODES)&_nodePROGramSTARt,
+(NODES)&_nodePROGramSTEP,
+(NODES)&_nodePROGramMEMory,
+(NODES)&_nodePROGramRUN,
+(NODES)&_nodePROGramOFFTime,
+(NODES)&_nodePROGramPFTime,
+(NODES)&_nodePROGramSTIMe,
+(NODES) 0 };
+
+const NODES _sonPROGramRECall[]={
+(NODES)&_nodePROGramRECallDEFault,
+(NODES) 0 };
+
+const NODES _sonPROG[]={
+(NODES)&_nodePROGONTime,
+(NODES)&_nodePROGCHAin,
+(NODES)&_nodePROGSAVE,
+(NODES) 0 };
+
+const NODES _sonCHAin[]={
+(NODES)&_nodeCHAinSTARt,
+(NODES)&_nodeCHAinP2P,
+(NODES)&_nodeCHAinRECall,
+(NODES)&_nodeCHAinDEFault,
+(NODES) 0 };
+
+const NODES _sonPROGCHAin[]={
+(NODES)&_nodePROGCHAinSTARt,
+(NODES)&_nodePROGCHAinP2P,
+(NODES)&_nodePROGCHAinRECall,
+(NODES)&_nodePROGCHAinDEFault,
+(NODES) 0 };
+
+const NODES _sonCHAinRECall[]={
+(NODES)&_nodeCHAinRECallDEFault,
+(NODES) 0 };
+
+const NODES _sonPROGCHAinRECall[]={
+(NODES)&_nodePROGCHAinRECallDEFault,
+(NODES) 0 };
+
+const NODES _sonNSEQuence[]={
+(NODES)&_nodeNSEQuenceSTATe,
+(NODES)&_nodeNSEQuenceSTARt,
+(NODES)&_nodeNSEQuenceNUMBer,
+(NODES)&_nodeNSEQuenceMEMO,
+(NODES)&_nodeNSEQuenceMODE,
+(NODES)&_nodeNSEQuenceRANGe,
+(NODES)&_nodeNSEQuenceLOOP,
+(NODES)&_nodeNSEQuenceLLOad,
+(NODES)&_nodeNSEQuenceLAST,
+(NODES)&_nodeNSEQuenceCHAin,
+(NODES)&_nodeNSEQuenceEDIT,
+(NODES)&_nodeNSEQuenceDELet,
+(NODES)&_nodeNSEQuenceALL,
+(NODES)&_nodeNSEQuenceSAVE,
+(NODES) 0 };
+
+const NODES _sonNSEQuenceDELet[]={
+(NODES)&_nodeNSEQuenceDELetALL,
+(NODES) 0 };
+
+const NODES _sonFSEQuence[]={
+(NODES)&_nodeFSEQuenceSTATe,
+(NODES)&_nodeFSEQuenceMEMO,
+(NODES)&_nodeFSEQuenceMODE,
+(NODES)&_nodeFSEQuenceRANGe,
+(NODES)&_nodeFSEQuenceLOOP,
+(NODES)&_nodeFSEQuenceTBASe,
+(NODES)&_nodeFSEQuenceLLOad,
+(NODES)&_nodeFSEQuenceLAST,
+(NODES)&_nodeFSEQuenceRPTStep,
+(NODES)&_nodeFSEQuenceEDIT,
+(NODES)&_nodeFSEQuenceDELet,
+(NODES)&_nodeFSEQuenceALL,
+(NODES)&_nodeFSEQuenceFILL,
+(NODES)&_nodeFSEQuenceSAVE,
+(NODES) 0 };
+
+const NODES _sonFSEQuenceDELet[]={
+(NODES)&_nodeFSEQuenceDELetALL,
+(NODES) 0 };
+
+const NODES _sonFSEQuenceEDIT[]={
+(NODES)&_nodeFSEQuenceEDITFILL,
+(NODES) 0 };
+
+const NODES _sonUTILity[]={
+(NODES)&_nodeUTILitySYSTem,
+(NODES)&_nodeUTILityLOAD,
+(NODES)&_nodeUTILityINTerface,
+(NODES)&_nodeUTILityBRATe,
+(NODES)&_nodeUTILitySBIT,
+(NODES)&_nodeUTILityPARity,
+(NODES)&_nodeUTILityTIME,
+(NODES)&_nodeUTILityKNOB,
+(NODES)&_nodeUTILitySPEaker,
+(NODES)&_nodeUTILityALARm,
+(NODES)&_nodeUTILityUNReg,
+(NODES)&_nodeUTILityGNG,
+(NODES)&_nodeUTILityCONTrast,
+(NODES)&_nodeUTILityBRIGhtness,
+(NODES)&_nodeUTILityLANGuage,
+(NODES) 0 };
+
+const NODES _sonMEMory[]={
+(NODES)&_nodeMEMorySAVE,
+(NODES)&_nodeMEMoryRECall,
+(NODES) 0 };
+
+const NODES _sonPRESet[]={
+(NODES)&_nodePRESetSAVE,
+(NODES)&_nodePRESetRECall,
+(NODES) 0 };
+
+const NODES _sonSETup[]={
+(NODES)&_nodeSETupSAVE,
+(NODES)&_nodeSETupRECall,
+(NODES) 0 };
+
+const NODES _sonFACTory[]={
+(NODES)&_nodeFACToryRECall,
+(NODES) 0 };
+
+const NODES _sonUSERdefault[]={
+(NODES)&_nodeUSERdefaultSAVE,
+(NODES) 0 };
+
+const NODES _sonUSER[]={
+(NODES)&_nodeUSERSAVE,
+(NODES) 0 };
+
+const NODES _sonSERial[]={
+(NODES)&_nodeSERialMASTer,
+(NODES) 0 };
+
+
+
+
+
+//Create Parameter Node
+const STR_PARAMS1 parameters[]= {
+// Command Node Name
+//-----ID_NO --------|------ SET COMMAND --------|------- QUERY COMMAND -------|
+//-------------------|-- min,max,-------type ----|-- min,max,------- type -----|
+//*CAL
+	{_id_CAL, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*CLS
+	{_id_CLS, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*ESE <NR1>
+	{_id_ESE, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//*ESR
+	{_id_ESR, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*IDN
+	{_id_IDN, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*OPC <NR1>
+	{_id_OPC, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//*RCL <NR1>
+	{_id_RCL, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//*RST
+	{_id_RST, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*SAV <NR1>
+	{_id_SAV, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//*SRE <NR1>
+	{_id_SRE, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//*STB
+	{_id_STB, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*TRG
+	{_id_TRG, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*TST
+	{_id_TST, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//*WAI
+	{_id_WAI, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:ABORt 
+	{_idABORt, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:SYSTem:ERRor 
+	{_idSYSTemERRor, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:INPut  <bool>|OFF|ON
+	{_idINPut, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//[:INPut]:SHORt <bool>|OFF|ON
+	{_idINPutSHORt, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:INPut:MODE LOAD|PROG|NSEQ|FSEQ 
+	{_idINPutMODE, {{1, 1, (PARAM_ITEM*) &_pg3},  {0, 0, (PARAM_ITEM*)0}}},
+//:MEASure:CURRent 
+	{_idMEASureCURRent, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:MEASure:VOLTage 
+	{_idMEASureVOLTage, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:MEASure:POWer 
+	{_idMEASurePOWer, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:MEASure:ETIMe 
+	{_idMEASureETIMe, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:OCP <NR2>(A)|MINimum|MAXimum|LIMit|LOFF
+	{_idCONFigureOCP, {{1, 1, (PARAM_ITEM*) &_pg4},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:OPP <NR2>(W)|MINimum|MAXimum|LIMit|LOFF
+	{_idCONFigureOPP, {{1, 1, (PARAM_ITEM*) &_pg6},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:UVP <NR2>(V)|MINimum|MAXimum
+	{_idCONFigureUVP, {{1, 1, (PARAM_ITEM*) &_pg7},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:OVP <NR2>(V)|MINimum|MAXimum
+	{_idCONFigureOVP, {{1, 1, (PARAM_ITEM*) &_pg7},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:SSTart <NR2>(SEC)|MINimum|MAXimum|OFF
+	{_idCONFigureSSTart, {{1, 1, (PARAM_ITEM*) &_pg8},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:VON <NR2>(V)|MINimum|MAXimum|LON|LOFF
+	{_idCONFigureVON, {{1, 1, (PARAM_ITEM*) &_pg9},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:VDELay <NR2>(SEC)|MINimum|MAXimum|OFF
+	{_idCONFigureVDELay, {{1, 1, (PARAM_ITEM*) &_pg8},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CONFigure:RESPonse <NR2>(SEC)|MINimum|MAXimum
+	{_idCONFigureRESPonse, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:CNTime <bool>|OFF|ON
+	{_idCONFigureCNTime, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:COTime <NR2>(SEC)|MINimum|MAXimum|OFF
+	{_idCONFigureCOTime, {{1, 1, (PARAM_ITEM*) &_pg8},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:CRUNit OHM|MHO
+	{_idCONFigureCRUNit, {{1, 1, (PARAM_ITEM*) &_pg11},  {0, 0, (PARAM_ITEM*)0}}},
+//:CONFigure:DYNamic VALue|PERCent|TIME|FDUTy
+	{_idCONFigureDYNamic, {{1, 1, (PARAM_ITEM*) &_pg12},  {0, 0, (PARAM_ITEM*)0}}},
+//:CONFigure:MEMory SAFety|DIRect
+	{_idCONFigureMEMory, {{1, 1, (PARAM_ITEM*) &_pg13},  {0, 0, (PARAM_ITEM*)0}}},
+//:CONFigure:SHORt TOGGle|HOLD
+	{_idCONFigureSHORt, {{1, 1, (PARAM_ITEM*) &_pg14},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:GNG:SPECtest <bool>|OFF|ON
+	{_idCONFigureGNGSPECtest, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:GNG:DTIMe <NR2>(SEC)|MINimum|MAXimum
+	{_idCONFigureGNGDTIMe, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//[:CONFigure]:GNG:MODE VALue|PERCent
+	{_idCONFigureGNGMODE, {{1, 1, (PARAM_ITEM*) &_pg15},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:GNG[:PASS] 
+	{_idCONFigureGNGPASS, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:GNG:H <NR2>
+	{_idCONFigureGNGH, {{1, 1, (PARAM_ITEM*) &_pg16},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:GNG:L <NR2 >
+	{_idCONFigureGNGL, {{1, 1, (PARAM_ITEM*) &_pg16},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:GNG:C <NR2>
+	{_idCONFigureGNGC, {{1, 1, (PARAM_ITEM*) &_pg16},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:PARallel MASTer|SLAVe|OFF|P2|P3|P4|P5|B1|B2|B3|B4
+	{_idCONFigurePARallel, {{1, 1, (PARAM_ITEM*) &_pg17},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CCH <NR2>(A)|MINimum|MAXimum
+	{_idCONFigureSTEPCCH, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CCM <NR2>(A)|MINimum|MAXimum
+	{_idCONFigureSTEPCCM, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CCL <NR2>(A)|MINimum|MAXimum
+	{_idCONFigureSTEPCCL, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CC 
+	{_idCONFigureSTEPCC, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CRH <NR2>|MINimum|MAXimum
+	{_idCONFigureSTEPCRH, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CRM <NR2>|MINimum|MAXimum
+	{_idCONFigureSTEPCRM, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CRL <NR2>|MINimum|MAXimum
+	{_idCONFigureSTEPCRL, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CR 
+	{_idCONFigureSTEPCR, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CVH <NR2>(V)|MINimum|MAXimum
+	{_idCONFigureSTEPCVH, {{1, 1, (PARAM_ITEM*) &_pg7},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CVL <NR2>(V)|MINimum|MAXimum
+	{_idCONFigureSTEPCVL, {{1, 1, (PARAM_ITEM*) &_pg7},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CV 
+	{_idCONFigureSTEPCV, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CPH <NR2>(W)|MINimum|MAXimum
+	{_idCONFigureSTEPCPH, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CPM <NR2>(W)|MINimum|MAXimum
+	{_idCONFigureSTEPCPM, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CPL <NR2>(W)|MINimum|MAXimum
+	{_idCONFigureSTEPCPL, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:STEP:CP 
+	{_idCONFigureSTEPCP, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:EXTernal[:CONTrol] OFF|VOLTage|RESistance|RINV
+	{_idCONFigureEXTernalCONTrol, {{1, 1, (PARAM_ITEM*) &_pg21},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:EXTernal:LOADonin OFF|HIGH|LOW
+	{_idCONFigureEXTernalLOADonin, {{1, 1, (PARAM_ITEM*) &_pg22},  {0, 0, (PARAM_ITEM*)0}}},
+//[:CONFigure]:EXTernal:SYNC <bool>|OFF|ON
+	{_idCONFigureEXTernalSYNC, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:MODE CC|CR|CV|CP|CCCV|CRCV|CPCV
+	{_idMODE, {{1, 1, (PARAM_ITEM*) &_pg23},  {0, 0, (PARAM_ITEM*)0}}},
+//[:MODE]:CRANge HIGH|MIDDle|LOW
+	{_idMODECRANge, {{1, 1, (PARAM_ITEM*) &_pg24},  {0, 0, (PARAM_ITEM*)0}}},
+//[:MODE]:VRANge HIGH|LOW
+	{_idMODEVRANge, {{1, 1, (PARAM_ITEM*) &_pg25},  {0, 0, (PARAM_ITEM*)0}}},
+//[:MODE]:DYNamic DYNamic|STATic
+	{_idMODEDYNamic, {{1, 1, (PARAM_ITEM*) &_pg26},  {0, 0, (PARAM_ITEM*)0}}},
+//[:MODE]:RESPonse FAST|SLOW
+	{_idMODERESPonse, {{1, 1, (PARAM_ITEM*) &_pg27},  {0, 0, (PARAM_ITEM*)0}}},
+//:CURRent[:VA] <NR2>(A)|MINimum|MAXimum
+	{_idCURRentVA, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:VB <NR2>(A)|MINimum|MAXimum
+	{_idCURRentVB, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:SRATe <NR2>|MINimum|MAXimum
+	{_idCURRentSRATe, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:L1 <NR2>(A)|MINimum|MAXimum
+	{_idCURRentL1, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:L2 <NR2>(A)|MINimum|MAXimum
+	{_idCURRentL2, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:SET <NR2>(A)|MINimum|MAXimum
+	{_idCURRentSET, {{1, 1, (PARAM_ITEM*) &_pg18},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:LEVel <NR2>|MINimum|MAXimum
+	{_idCURRentLEVel, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:RISE <NR2>|MINimum|MAXimum
+	{_idCURRentRISE, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:FALL <NR2>|MINimum|MAXimum
+	{_idCURRentFALL, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:T1 <NR2>(SEC)|MINimum|MAXimum
+	{_idCURRentT1, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:T2 <NR2>(SEC)|MINimum|MAXimum
+	{_idCURRentT2, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:FREQuency <NR2>|MINimum|MAXimum
+	{_idCURRentFREQuency, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:CURRent:DUTY <NR2>|MINimum|MAXimum
+	{_idCURRentDUTY, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance[:VA] <NR2>|MINimum|MAXimum
+	{_idRESistanceVA, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:VB <NR2>|MINimum|MAXimum
+	{_idRESistanceVB, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:SRATe <NR2>|MINimum|MAXimum
+	{_idRESistanceSRATe, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:L1 <NR2>|MINimum|MAXimum
+	{_idRESistanceL1, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:L2 <NR2>|MINimum|MAXimum
+	{_idRESistanceL2, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:SET <NR2>|MINimum|MAXimum
+	{_idRESistanceSET, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:LEVel <NR2>|MINimum|MAXimum
+	{_idRESistanceLEVel, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:RISE <NR2>|MINimum|MAXimum
+	{_idRESistanceRISE, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:FALL <NR2>|MINimum|MAXimum
+	{_idRESistanceFALL, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:T1 <NR2>(SEC)|MINimum|MAXimum
+	{_idRESistanceT1, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:T2 <NR2>(SEC)|MINimum|MAXimum
+	{_idRESistanceT2, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:FREQuency <NR2>|MINimum|MAXimum
+	{_idRESistanceFREQuency, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:RESistance:DUTY <NR2>|MINimum|MAXimum
+	{_idRESistanceDUTY, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:VOLTage[:VA] <NR2>(V)|MINimum|MAXimum
+	{_idVOLTageVA, {{1, 1, (PARAM_ITEM*) &_pg7},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:VOLTage:VB <NR2>(V)|MINimum|MAXimum
+	{_idVOLTageVB, {{1, 1, (PARAM_ITEM*) &_pg7},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer[:VA] <NR2>(W)|MINimum|MAXimum
+	{_idPOWerVA, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:VB <NR2>(W)|MINimum|MAXimum
+	{_idPOWerVB, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:L1 <NR2>(W)|MINimum|MAXimum
+	{_idPOWerL1, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:L2 <NR2>(W)|MINimum|MAXimum
+	{_idPOWerL2, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:SET <NR2>(W)|MINimum|MAXimum
+	{_idPOWerSET, {{1, 1, (PARAM_ITEM*) &_pg20},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:LEVel <NR2>|MINimum|MAXimum
+	{_idPOWerLEVel, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:T1 <NR2>(SEC)|MINimum|MAXimum
+	{_idPOWerT1, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:T2 <NR2>(SEC)|MINimum|MAXimum
+	{_idPOWerT2, {{1, 1, (PARAM_ITEM*) &_pg10},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:FREQuency <NR2>|MINimum|MAXimum
+	{_idPOWerFREQuency, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:POWer:DUTY <NR2>|MINimum|MAXimum
+	{_idPOWerDUTY, {{1, 1, (PARAM_ITEM*) &_pg19},  {0, 1, (PARAM_ITEM*) &_pg5}}},
+//:PROGram:STATe <bool>|OFF|ON
+	{_idPROGramSTATe, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram <NR1>,<NR1>,<NR1>,SKIP|AUTomatic|MANual,<NR2>,<NR2>|OFF,<NR2>|OFF,<NR2>|OFF
+	{_idPROGram, {{8, 8, (PARAM_ITEM*) &_pg28},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram[:RECall]:DEFault 
+	{_idPROGramRECallDEFault, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:STARt <NR1>
+	{_idPROGramSTARt, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:STEP <NR1>
+	{_idPROGramSTEP, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:MEMory <NR1> 
+	{_idPROGramMEMory, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:RUN SKIP|AUTomatic|MANual
+	{_idPROGramRUN, {{1, 1, (PARAM_ITEM*) &_pg29},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROG:ONTime <NR2>(s)
+	{_idPROGONTime, {{1, 1, (PARAM_ITEM*) &_pg30},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:OFFTime <NR2>(s)|OFF
+	{_idPROGramOFFTime, {{1, 1, (PARAM_ITEM*) &_pg31},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:PFTime <NR2>(s)|OFF
+	{_idPROGramPFTime, {{1, 1, (PARAM_ITEM*) &_pg31},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROGram:STIMe <NR2>(s)|OFF
+	{_idPROGramSTIMe, {{1, 1, (PARAM_ITEM*) &_pg31},  {0, 0, (PARAM_ITEM*)0}}},
+//[:PROG]:CHAin:STARt <NR1>
+	{_idPROGCHAinSTARt, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//[:PROG]:CHAin <NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF,<NR1>|OFF
+	{_idPROGCHAin, {{16, 16, (PARAM_ITEM*) &_pg32},  {0, 0, (PARAM_ITEM*)0}}},
+//[:PROG]:CHAin:P2P <NR1>,<NR1>|OFF
+	{_idPROGCHAinP2P, {{2, 2, (PARAM_ITEM*) &_pg33},  {0, 0, (PARAM_ITEM*)0}}},
+//[:PROG]:CHAin[:RECall]:DEFault 
+	{_idPROGCHAinRECallDEFault, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:PROG:SAVE 
+	{_idPROGSAVE, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:STATe <bool>|OFF|ON
+	{_idNSEQuenceSTATe, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence <NR1>,<NR1>,<string>,CC|CR|CV|CP,IHVH|IMVH|ILVH|IHVL|IMVL|ILVL,<NR1>|INFinity,<bool>,<NR2>,<NR1>|OFF
+	{_idNSEQuence, {{9, 9, (PARAM_ITEM*) &_pg34},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:STARt <NR1>
+	{_idNSEQuenceSTARt, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:NUMBer <NR1>
+	{_idNSEQuenceNUMBer, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:MEMO <string>
+	{_idNSEQuenceMEMO, {{1, 1, (PARAM_ITEM*) &_pg35},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:MODE CC|CR|CV|CP
+	{_idNSEQuenceMODE, {{1, 1, (PARAM_ITEM*) &_pg36},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:RANGe IHVH|IMVH|ILVH|IHVL|IMVL|ILVL
+	{_idNSEQuenceRANGe, {{1, 1, (PARAM_ITEM*) &_pg37},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:LOOP <NR1>|INFinity
+	{_idNSEQuenceLOOP, {{1, 1, (PARAM_ITEM*) &_pg38},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:LLOad <bool>|OFF|ON
+	{_idNSEQuenceLLOad, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:LAST <NR2>(s)
+	{_idNSEQuenceLAST, {{1, 1, (PARAM_ITEM*) &_pg30},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:CHAin <NR1>|OFF
+	{_idNSEQuenceCHAin, {{1, 1, (PARAM_ITEM*) &_pg39},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:EDIT <NR1>,<NR1>,<NR2>,<NR1>,<NR1>,<NR1>,<NR1>,<bool>|OFF|ON,<bool>|OFF|ON,<bool>|OFF|ON,<bool>|OFF|ON
+	{_idNSEQuenceEDIT, {{11, 11, (PARAM_ITEM*) &_pg40},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence[:DELet]:ALL 
+	{_idNSEQuenceDELetALL, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:NSEQuence:SAVE 
+	{_idNSEQuenceSAVE, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:STATe <bool>|OFF|ON
+	{_idFSEQuenceSTATe, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence <string>,CC|CR,IHVH|IMVH|ILVH|IHVL|IMVL|ILVL,<NR1>|INFinity,<NR2>,<bool>,<NR2>,<NR1>
+	{_idFSEQuence, {{8, 8, (PARAM_ITEM*) &_pg41},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:MEMO <string>
+	{_idFSEQuenceMEMO, {{1, 1, (PARAM_ITEM*) &_pg35},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:MODE CC|CR
+	{_idFSEQuenceMODE, {{1, 1, (PARAM_ITEM*) &_pg42},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:RANGe IHVH|IMVH|ILVH|IHVL|IMVL|ILVL
+	{_idFSEQuenceRANGe, {{1, 1, (PARAM_ITEM*) &_pg37},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:LOOP <NR1>|INFinity
+	{_idFSEQuenceLOOP, {{1, 1, (PARAM_ITEM*) &_pg38},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:TBASe <NR2 > 
+	{_idFSEQuenceTBASe, {{1, 1, (PARAM_ITEM*) &_pg16},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:LLOad <bool>|OFF|ON
+	{_idFSEQuenceLLOad, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:LAST <NR2>
+	{_idFSEQuenceLAST, {{1, 1, (PARAM_ITEM*) &_pg16},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:RPTStep <NR1 >
+	{_idFSEQuenceRPTStep, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:EDIT <NR1>,<NR1>,<NR2>,<bool>|OFF|ON
+	{_idFSEQuenceEDIT, {{4, 4, (PARAM_ITEM*) &_pg43},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence[:DELet]:ALL 
+	{_idFSEQuenceDELetALL, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence[:EDIT]:FILL <NR2>,<NR2>,<NR1>,<NR1>
+	{_idFSEQuenceEDITFILL, {{4, 4, (PARAM_ITEM*) &_pg44},  {0, 0, (PARAM_ITEM*)0}}},
+//:FSEQuence:SAVE 
+	{_idFSEQuenceSAVE, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:SYSTem 
+	{_idUTILitySYSTem, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:LOAD OFF|ON|LOAD|PROG|NSEQ|FSEQ
+	{_idUTILityLOAD, {{1, 1, (PARAM_ITEM*) &_pg45},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:INTerface USB|RS232
+	{_idUTILityINTerface, {{1, 1, (PARAM_ITEM*) &_pg46},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:BRATe <NR1>
+	{_idUTILityBRATe, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:SBIT <NR1>
+	{_idUTILitySBIT, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:PARity NONE|ODD|EVEN
+	{_idUTILityPARity, {{1, 1, (PARAM_ITEM*) &_pg47},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:TIME <NR1>,<NR1>,<NR1>,<NR1>,<NR1>
+	{_idUTILityTIME, {{5, 5, (PARAM_ITEM*) &_pg48},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:KNOB OLD|UPDated
+	{_idUTILityKNOB, {{1, 1, (PARAM_ITEM*) &_pg49},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:SPEaker <bool>|OFF|ON
+	{_idUTILitySPEaker, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:ALARm <bool>|OFF|ON
+	{_idUTILityALARm, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:UNReg <bool>|OFF|ON
+	{_idUTILityUNReg, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:GNG <bool>|OFF|ON
+	{_idUTILityGNG, {{1, 1, (PARAM_ITEM*) &_pg2},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:CONTrast <NR1>
+	{_idUTILityCONTrast, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:BRIGhtness <NR1>
+	{_idUTILityBRIGhtness, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:UTILity:LANGuage ENGLish
+	{_idUTILityLANGuage, {{1, 1, (PARAM_ITEM*) &_pg50},  {0, 0, (PARAM_ITEM*)0}}},
+//:MEMory:SAVE <NR1>
+	{_idMEMorySAVE, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:MEMory:RECall <NR1>
+	{_idMEMoryRECall, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:PRESet:SAVE <NR1>
+	{_idPRESetSAVE, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:PRESet:RECall <NR1>
+	{_idPRESetRECall, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:SETup:SAVE <NR1>
+	{_idSETupSAVE, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:SETup:RECall <NR1> 
+	{_idSETupRECall, {{1, 1, (PARAM_ITEM*) &_pg1},  {0, 0, (PARAM_ITEM*)0}}},
+//:FACTory[:RECall] 
+	{_idFACToryRECall, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:USERdefault:SAVE 
+	{_idUSERdefaultSAVE, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:USER[:DEFault]:SAVE 
+	{_idUSERDEFaultSAVE, {{0, 0, (PARAM_ITEM*)0},  {0, 0, (PARAM_ITEM*)0}}},
+//:SERial[:MASTer] <string>
+	{_idSERialMASTer, {{1, 1, (PARAM_ITEM*) &_pg35},  {0, 0, (PARAM_ITEM*)0}}},
+};
+
