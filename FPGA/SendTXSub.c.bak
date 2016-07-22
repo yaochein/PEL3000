@@ -1,0 +1,5010 @@
+
+#include "includes.h"
+#include "keydef.h"
+#include "TxComm.h"
+#include "FPGA.h"
+#include "math.h"
+
+#include <stdlib.h>
+
+#define CP_SR_Range		SlewRate_L_Range	
+//#define CP_SR_Range		SlewRate_M_Range
+#define CP_SR_CNT		2500*20
+//#define CP_SR_CNT		2500*20/5
+
+unsigned char  LoadON_Time[4]={0};		// 2010_05
+unsigned short Acquire_Cont = 0, P_Sense;
+char TXData[250];
+p3k_send_tx_list TX_LIST;	
+void SendTXData(p3k_send_tx_list *data);
+void MenuDecoderAddr(p3k_send_tx_list *data);
+void MachineSetupFun(void);
+void CCModeSetupFun(void);
+void CRModeSetupFun(void);
+void CVModeSetupFun(void);
+void CPModeSetupFun(void);
+void SeqMemSetupFun(void);
+void SeqPFTimeSetupFun(void);
+char GetMemIndexCT(char no);
+void SaveMemFun(void);
+void SaveSeqFun(void);
+void SaveSeqFunAll(void);
+void SavePMemFun(void);
+void RecallPMemFun(void);
+void CalibrationFun(void);
+void RecallMemFun(void);
+void WriteFlashFun(void);
+void Para_Ext_Fun(void);
+void FPGA_Init(void);	// 2010_05
+void FPGA_Ctrl(void);
+extern void PEL3000_LED_Control( char mode, char onoff);
+extern unsigned short sport0Read_ku(unsigned long data);
+extern void Debug_printf(char *Message);
+extern void Menu_Message(char *Message,int x,int y);
+extern void Update_Panel(void);
+extern void RestoreRealChan(void);
+extern void ConstDelay(UWORD Delay_Para);
+extern void RedrawProgExecute(void);
+
+UWORD PEL3000_FPGA_Date;
+
+//#define Acess_FPGA(Comm, Data) sport0Read(Comm|Data)		// 2010_05
+UWORD Acess_FPGA(ULONG Comm,UWORD Data)
+{
+	ULONG Send_Data,Temp_Data;
+	UWORD Receive_Data;
+#if (Adam_debug)
+	unsigned char n;
+#endif
+
+	
+	Send_Data = (Comm&0xFFFF0000);
+	Temp_Data = (ULONG)Data;
+	Temp_Data &= 0x0000FFFF;
+	Send_Data += Temp_Data;
+	Receive_Data = sport0Read_ku(Send_Data);
+
+
+#if (Adam_debug)
+	n = Comm>>24;
+	FPGA_W[n] = Send_Data; 
+	FPGA_R[n] = Receive_Data;
+	A_d1 = Send_Data; //Adam_test
+	A_d2 = Send_Data;
+#endif
+
+	return Receive_Data;
+}
+
+const unsigned short I_Circuit_Switch_Control[30]=
+{
+	 I_CC_Low_0		,I_CC_Low_1
+	,I_CC_Mid_0		,I_CC_Mid_1
+	,I_CC_High_0	,I_CC_High_1
+	
+	,I_CR_Low_0		,I_CR_Low_1
+	,I_CR_Mid_0		,I_CR_Mid_1
+	,I_CR_High_0	,I_CR_High_1
+	
+	,I_CV_Low_0		,I_CV_Low_1	
+	,I_CV_Mid_0		,I_CV_Mid_1
+	,I_CV_High_0	,I_CV_High_1
+	
+	,I_CP_Low_0		,I_CP_Low_1
+	,I_CP_Mid_0		,I_CP_Mid_1
+	,I_CP_High_0	,I_CP_High_1
+	
+	,I_CC_Low_0		,I_CC_Low_1
+	,I_CC_Mid_0		,I_CC_Mid_1
+	,I_CC_High_0	,I_CC_High_1
+};
+
+const unsigned short I_Calibration_Circuit_Switch_Control[MODE_Number*6]=
+{
+	 I_CC_Low_0		,I_CC_Low_1		/* CC_MODE */
+	,I_CC_Mid_0		,I_CC_Mid_1
+	,I_CC_High_0	,I_CC_High_1
+	
+	,I_CR_Low_0		,I_CR_Low_1		/* CR_MODE */
+	,I_CR_Mid_0		,I_CR_Mid_1
+	,I_CR_High_0	,I_CR_High_1
+	
+	,I_Cal_CV_Low	,I_CV_Low_1		/* CV_MODE */
+	,I_Cal_CV_High	,I_CV_Mid_1
+	,I_Cal_CV_High	,I_CV_High_1
+	
+	,I_CP_Low_0		,I_CP_Low_1		/* CP_MODE */
+	,I_CP_Mid_0		,I_CP_Mid_1
+	,I_CP_High_0	,I_CP_High_1
+	
+	,I_Cal_CxCV_Low	,I_CC_Low_1		/* CX CV_MODE */
+	,I_Cal_CxCV_High,I_CC_Mid_1
+	,I_Cal_CxCV_High,I_CC_High_1
+
+	,I_CC_Low_0		,I_CC_Low_1 	/* F_IMON_MODE */
+	,I_CC_Mid_0 	,I_CC_Mid_1
+	,I_CC_High_0	,I_CC_High_1
+
+	,I_CC_Low_0 	,I_CC_Low_1 	/* R_IMON_MODE */
+	,I_CC_Mid_0 	,I_CC_Mid_1
+	,I_CC_High_0	,I_CC_High_1
+
+	,E_CC_Low_0		,E_CC_Low_1		/* Ext_V_CC_MODE */
+	,E_CC_Mid_0		,E_CC_Mid_1
+	,E_CC_High_0	,E_CC_High_1
+
+	,E_CC_Low_0 	,E_CC_Low_1		/* Ext_R_CC_MODE */
+	,E_CC_Mid_0 	,E_CC_Mid_1
+	,E_CC_High_0	,E_CC_High_1
+};
+
+const unsigned short E_Circuit_Switch_Control[30]=
+{
+	 E_CC_Low_0		,E_CC_Low_1
+	,E_CC_Mid_0		,E_CC_Mid_1
+	,E_CC_High_0	,E_CC_High_1
+	,E_CR_Low_0		,E_CR_Low_1
+	,E_CR_Mid_0		,E_CR_Mid_1
+	,E_CR_High_0	,E_CR_High_1
+	,E_CV_Low_0		,E_CV_Low_1	
+	,E_CV_Mid_0		,E_CV_Mid_1
+	,E_CV_High_0	,E_CV_High_1
+	,E_CP_Low_0		,E_CP_Low_1
+	,E_CP_Mid_0		,E_CP_Mid_1
+	,E_CP_High_0	,E_CP_High_1
+	,E_CC_Low_0		,E_CC_Low_1
+	,E_CC_Mid_0		,E_CC_Mid_1
+	,E_CC_High_0	,E_CC_High_1
+};
+
+UWORD Response_Select(UBYTE Run_Mode,UWORD Response_Input)
+{
+	UWORD Response_Setting;
+	UWORD Maximum_Value = 0;
+	UWORD SetValueH = 0,SetValueL = 0; 
+	
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+#if 0	
+	if( (CC_MODE==Run_Mode && Data_tmp->CC.STADYNA)||(CR_MODE==Run_Mode && Data_tmp->CR.STADYNA)||(CP_MODE==Run_Mode && Data_tmp->CP.STADYNA) )
+		Response_Setting = CC_CR_CP_Response_1_1;
+	else
+	{
+		if(CC_MODE == Run_Mode)
+		{		
+			if(!Data_tmp->CC.STADYNA)
+			{
+				Maximum_Value = (ptrMODEL_TYPE->CC)[0+(Data_tmp->IRange*10)].Max;
+				if(Data_tmp->CC.ABSELECT==B_Value)	
+					SetValueH = Data_tmp->CC.STA[Data_tmp->IRange].VALUE2;
+				else
+					SetValueH = Data_tmp->CC.STA[Data_tmp->IRange].VALUE1;
+
+				if((SetValueH < Maximum_Value*0.1) && (Response_Input == P_1_1_Response))
+					Response_Input = P_1_2_Response;
+			}
+		}
+		
+		if(P_1_1_Response==Response_Input)	
+		 	Response_Setting = CC_CR_CP_Response_1_1;
+		else if(P_1_2_Response==Response_Input)	
+			Response_Setting = CC_CR_CP_Response_1_2;
+		else if(P_1_5_Response==Response_Input)	
+			Response_Setting = CC_CR_CP_Response_1_5;
+		else if(P_1_10_Response==Response_Input)
+			Response_Setting = CC_CR_CP_Response_1_10;
+		else
+		{
+			Response_Setting = CC_CR_CP_Response_1_1;
+			Debug_printf("Response Setting Error\n");
+		}
+	}
+#else
+	if(CP_MODE==Run_Mode)
+		Response_Setting = CC_CR_CP_Response_1_10;
+	else if((Data_tmp->IRange == Mid_RANGE) && (P_1_1_Response == Response_Input))
+		Response_Setting = CC_CR_CP_Response_1_2;
+	else
+	{
+		if(P_1_1_Response==Response_Input)	
+			Response_Setting = CC_CR_CP_Response_1_1;
+		else if(P_1_2_Response==Response_Input) 
+			Response_Setting = CC_CR_CP_Response_1_2;
+		else if(P_1_5_Response==Response_Input) 
+			Response_Setting = CC_CR_CP_Response_1_5;
+		else if(P_1_10_Response==Response_Input)
+			Response_Setting = CC_CR_CP_Response_1_10;
+		else
+		{
+			Response_Setting = CC_CR_CP_Response_1_1;
+			Debug_printf("Response Setting Error\n");
+		}
+	}
+#endif
+	return Response_Setting;
+}
+
+UWORD Step_To_CNT(UWORD Input_Step,double Input_Gain,double Input_Offset)
+{
+	double Output_CNT_Temp = 0.0;
+	UWORD Output_CNT = 0;
+	
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+		
+	Output_CNT_Temp = ( ((double)Input_Step)*Input_Gain )+Input_Offset;
+
+	if(Output_CNT_Temp>0)	
+		Output_CNT = (UWORD)Output_CNT_Temp;
+	else
+		Output_CNT = 0;
+
+	if(Output_CNT <= Input_Offset)
+		Output_CNT = 0;
+
+	return Output_CNT;
+}
+
+extern void Menu_Message_Pro(char Mode,char *Message);
+void Check_Max_Prot(void)		/* Inital FPGA Function */
+{
+	char i,str[50];
+	for(i=LOW_RANGE ; i<=HIGH_RANGE ; i++)
+	{
+		if(p3k_Cal_data.Protection[i].Rating_OCP>Default_Cal_Prot_DA_Rating)
+		{
+			sprintf(str,"R.OCP Out Of Range,R.OCP[%d]=%d\n",i,p3k_Cal_data.Protection[i].Rating_OCP);
+			Menu_Message_Pro(0,str);
+			Debug_printf(str);
+			p3k_Cal_data.Protection[i].Rating_OCP = Default_Cal_Prot_DA_Rating;
+		}
+		
+		if(p3k_Cal_data.Protection[i].CPP>Default_Cal_Prot_DA_Rating)
+		{
+			sprintf(str,"CPP Out Of Range,CPP[%d]=%d\n",i,p3k_Cal_data.Protection[i].CPP);
+			Menu_Message_Pro(0,str);
+			Debug_printf(str);
+			p3k_Cal_data.Protection[i].CPP = Default_Cal_Prot_DA_Rating;
+		}
+#if 0
+		if(p3k_Cal_data.Protection[i].OCP>Default_Cal_Prot_DA_Normal)
+			{
+			sprintf(str,"OCP Out Of Range,OCP[%d]=%d\n",i,p3k_Cal_data.Protection[i].OCP);
+			Menu_Message_Pro(0,str);
+			Debug_printf(str);
+			p3k_Cal_data.Protection[i].OCP = Default_Cal_Prot_DA_Normal;
+			}
+
+		if(p3k_Cal_data.Protection[i].OPP>Default_Cal_Prot_DA_Normal)
+			{
+			sprintf(str,"OPP Out Of Range,OPP[%d]=%d\n",i,p3k_Cal_data.Protection[i].OPP);
+			Menu_Message_Pro(0,str);
+			Debug_printf(str);
+			p3k_Cal_data.Protection[i].OPP = Default_Cal_Prot_DA_Normal;
+			}
+#endif		
+		}
+	}
+
+void FPGA_Init(void)		/* Inital FPGA Function */
+{
+	unsigned short VM_Range = 0, IM_Range = 0, Circuit_SW0 = 0, Circuit_SW1 = 0;
+	UWORD CC_H_Load_Off_Value,CC_M_Load_Off_Value,CC_L_Load_Off_Value;
+	UWORD CR_H_Load_Off_Value,CR_M_Load_Off_Value,CR_L_Load_Off_Value;
+	UWORD CP_H_Load_Off_Value,CP_M_Load_Off_Value,CP_L_Load_Off_Value;
+	UWORD CV_H_Load_Off_Value,CV_L_Load_Off_Value;
+	UWORD Voltage_H_Temp,Voltage_L_Temp;
+	float CR_Def_CNT;
+	SALONG LongVal;
+	UWORD FPGA_Data_Temp;
+	static unsigned char PowerOn_Flag = 0;	
+
+	P3k_Disp_Str	*Disp_tmp = &P3k_Disp_Data;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;	
+	p3k_send_tx_list tx_data;
+
+	p3k_Measure_Data.VOLT = NULL;
+	p3k_Measure_Data.CURR = NULL;
+	p3k_Measure_Data.WATT = NULL;
+#if ATS_para
+	ATS_para_flag = 0x0100;
+	P_Sense = Set_Normal_P_Sense_Operation | ATS_para_flag ;
+#else
+	P_Sense = Set_Normal_P_Sense_Operation;
+#endif
+	CC_H_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_H_L,	p3k_Cal_data.CC_Data[2].Cal_Value_Gain,p3k_Cal_data.CC_Data[2].Cal_Value_Offset);
+	CC_M_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_M,	p3k_Cal_data.CC_Data[1].Cal_Value_Gain,p3k_Cal_data.CC_Data[1].Cal_Value_Offset);
+	CC_L_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_H_L,	p3k_Cal_data.CC_Data[0].Cal_Value_Gain,p3k_Cal_data.CC_Data[0].Cal_Value_Offset);
+	CR_H_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_H_L,	p3k_Cal_data.CR_Data[2].Cal_Value_Gain,p3k_Cal_data.CR_Data[2].Cal_Value_Offset);
+	CR_M_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_M,	p3k_Cal_data.CR_Data[1].Cal_Value_Gain,p3k_Cal_data.CR_Data[1].Cal_Value_Offset);
+	CR_L_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_H_L,	p3k_Cal_data.CR_Data[0].Cal_Value_Gain,p3k_Cal_data.CR_Data[0].Cal_Value_Offset);
+	CP_H_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_H_L,	p3k_Cal_data.CP_Data[2].Cal_Value_Gain,p3k_Cal_data.CP_Data[2].Cal_Value_Offset);
+	CP_M_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_M,	p3k_Cal_data.CP_Data[1].Cal_Value_Gain,p3k_Cal_data.CP_Data[1].Cal_Value_Offset);
+	CP_L_Load_Off_Value = Step_To_CNT(Min_Startup_Setting_H_L,	p3k_Cal_data.CP_Data[0].Cal_Value_Gain,p3k_Cal_data.CP_Data[0].Cal_Value_Offset);
+
+	CV_H_Load_Off_Value = Step_To_CNT( ((ptrMODEL_TYPE->CV)[3].Def*1.1),p3k_Cal_data.CV_Data[1].Cal_Value_Gain,p3k_Cal_data.CV_Data[1].Cal_Value_Offset);
+	CV_L_Load_Off_Value = Step_To_CNT( ((ptrMODEL_TYPE->CV)[0].Def*1.1),p3k_Cal_data.CV_Data[0].Cal_Value_Gain,p3k_Cal_data.CV_Data[0].Cal_Value_Offset);
+
+	if(p3k_Acq_4K_Measure_Data.Acq4K_Enable)		
+		Acquire_Cont |= Enable_Acquire_System;
+	else
+		Acquire_Cont &= ~Enable_Acquire_System;
+
+#if 1
+	if(!PowerOn_Flag)
+	{
+		FPGA_Data_Temp = Acess_FPGA(FPGA_External_Status,NULL);
+		//Acess_FPGA(FPGA_Control, FPGA_Reset);
+		PowerOn_Flag = 1;	
+	}
+#endif
+
+	Acess_FPGA(CC_H_Load_Off, CC_H_Load_Off_Value);
+	Acess_FPGA(CC_M_Load_Off, CC_M_Load_Off_Value);
+	Acess_FPGA(CC_L_Load_Off, CC_L_Load_Off_Value);
+	Acess_FPGA(CR_H_Load_Off, CR_H_Load_Off_Value);
+	Acess_FPGA(CR_M_Load_Off, CR_M_Load_Off_Value);
+	Acess_FPGA(CR_L_Load_Off, CR_L_Load_Off_Value);
+	Acess_FPGA(CP_H_Load_Off, CP_H_Load_Off_Value);
+	Acess_FPGA(CP_M_Load_Off, CP_M_Load_Off_Value);
+	Acess_FPGA(CP_L_Load_Off, CP_L_Load_Off_Value);
+
+	Acess_FPGA(CV_H_Load_Off, CV_H_Load_Off_Value);
+	Acess_FPGA(CV_L_Load_Off, CV_L_Load_Off_Value);	
+
+	Acess_FPGA(FPGA_XH_OS_Ref, p3k_Cal_data.PSensor.XH_Value);
+	Acess_FPGA(FPGA_YH_OS_Ref, p3k_Cal_data.PSensor.YH_Value);
+	Acess_FPGA(FPGA_ZH_OS_Ref, p3k_Cal_data.PSensor.ZH_Value);
+	Acess_FPGA(FPGA_XL_OS_Ref, p3k_Cal_data.PSensor.XL_Value);
+	Acess_FPGA(FPGA_YL_OS_Ref, p3k_Cal_data.PSensor.YL_Value);
+	Acess_FPGA(FPGA_ZL_OS_Ref, p3k_Cal_data.PSensor.ZL_Value);
+	
+	Check_Max_Prot();
+	
+	Acess_FPGA(FPGA_CX_H_ROCP,p3k_Cal_data.Protection[IRange_High].Rating_OCP);
+	Acess_FPGA(FPGA_CX_M_ROCP,p3k_Cal_data.Protection[Mid_RANGE].Rating_OCP);
+	Acess_FPGA(FPGA_CX_L_ROCP,p3k_Cal_data.Protection[LOW_RANGE].Rating_OCP);
+	
+	//Acess_FPGA(FPGA_IS_OS_Ref, 50000);
+	//Acess_FPGA(FPGA_VS_OS_Ref, 40000);
+	if(Data_tmp->CONF.VON_VOLT[1]<30)	
+		Voltage_H_Temp = 30;
+	else
+		Voltage_H_Temp = Data_tmp->CONF.VON_VOLT[1];
+
+	if(Data_tmp->CONF.VON_VOLT[0]<50)	
+		Voltage_L_Temp = 50;
+	else
+		Voltage_L_Temp = Data_tmp->CONF.VON_VOLT[0];
+
+	Acess_FPGA(FPGA_VON_H, Voltage_H_Temp);
+	Acess_FPGA(FPGA_VON_L, Voltage_L_Temp);
+
+	if( (Data_tmp->CURRMODE==CV_MODE)||(Data_tmp->CONF.CV_Func_En==Switch_OFF) )
+	{
+		Acess_FPGA(Cx_CV_H_Value, 0);
+		Acess_FPGA(Cx_CV_L_Value, 0);
+		Acess_FPGA(Cx_CV_H_Step,  0);
+		Acess_FPGA(Cx_CV_L_Step,  0);
+	}
+	else
+	{
+		if(Data_tmp->CV.STA[1].VALUE1<10)	
+			Voltage_H_Temp = 10;
+		else
+			Voltage_H_Temp = Data_tmp->CV.STA[1].VALUE1;
+
+		if(Data_tmp->CV.STA[0].VALUE1<10)	
+			Voltage_L_Temp = 10;
+		else
+			Voltage_L_Temp = Data_tmp->CV.STA[0].VALUE1;
+
+		Acess_FPGA(Cx_CV_H_Value, Step_To_CNT(Voltage_H_Temp,p3k_Cal_data.Protection[2].CxCV_Gain,p3k_Cal_data.Protection[2].CxCV_Offset));
+		Acess_FPGA(Cx_CV_L_Value, Step_To_CNT(Voltage_L_Temp,p3k_Cal_data.Protection[0].CxCV_Gain,p3k_Cal_data.Protection[0].CxCV_Offset));
+		Acess_FPGA(Cx_CV_H_Step, Voltage_H_Temp);
+		Acess_FPGA(Cx_CV_L_Step, Voltage_L_Temp);
+	}
+
+	Acess_FPGA(Prot_OS_Ref, 50000);
+
+	Acess_FPGA(FPGA_CX_H_CPP,p3k_Cal_data.Protection[IRange_High].CPP);
+	Acess_FPGA(FPGA_CX_M_CPP,p3k_Cal_data.Protection[IRange_Mid].CPP);
+	Acess_FPGA(FPGA_CX_L_CPP,p3k_Cal_data.Protection[IRange_Low].CPP);
+
+	Acess_FPGA(FPGA_CX_H_OCP, p3k_Cal_data.Protection[IRange_High].OCP);
+	Acess_FPGA(FPGA_CX_M_OCP, p3k_Cal_data.Protection[IRange_Mid].OCP);
+	Acess_FPGA(FPGA_CX_L_OCP, p3k_Cal_data.Protection[IRange_Low].OCP);
+
+	Acess_FPGA(FPGA_CX_H_OPP, p3k_Cal_data.Protection[IRange_High].OPP);
+	Acess_FPGA(FPGA_CX_M_OPP, p3k_Cal_data.Protection[IRange_Mid].OPP);
+	Acess_FPGA(FPGA_CX_L_OPP, p3k_Cal_data.Protection[IRange_Low].OPP);
+
+	CR_Def_CNT =  (ptrMODEL_TYPE->CR)[0].Max/1.05;	/*Max Setting(1.05) ->Setting(1) */
+	CR_Def_CNT /= 40000.0;						/*Setting	 -> Ext_Setting*/
+	CR_Def_CNT *= 65535.0;
+	LongVal.l  = (ULONG)(CR_Def_CNT*p3k_Cal_data.CR_Data[HIGH_RANGE].Cal_Value_Gain);
+	Acess_FPGA(FPGA_EXT_CRH_RV_Control_Gain_MSB,  LongVal.s[1]);
+	Acess_FPGA(FPGA_EXT_CRH_RV_Control_Gain_LSB,  LongVal.s[0]);
+	LongVal.l  = (ULONG)(CR_Def_CNT*p3k_Cal_data.CR_Data[Mid_RANGE].Cal_Value_Gain);
+	Acess_FPGA(FPGA_EXT_CRM_RV_Control_Gain_MSB,  LongVal.s[1]);
+	Acess_FPGA(FPGA_EXT_CRM_RV_Control_Gain_LSB,  LongVal.s[0]);
+	LongVal.l  = (ULONG)(CR_Def_CNT*p3k_Cal_data.CR_Data[LOW_RANGE].Cal_Value_Gain);
+	Acess_FPGA(FPGA_EXT_CRL_RV_Control_Gain_MSB,  LongVal.s[1]);
+	Acess_FPGA(FPGA_EXT_CRL_RV_Control_Gain_LSB,  LongVal.s[0]);
+	Acess_FPGA(FPGA_EXT_CRH_RV_Control_Offset,p3k_Cal_data.CR_Data[HIGH_RANGE].Cal_Value_Offset);
+	Acess_FPGA(FPGA_EXT_CRM_RV_Control_Offset,p3k_Cal_data.CR_Data[Mid_RANGE].Cal_Value_Offset);
+	Acess_FPGA(FPGA_EXT_CRL_RV_Control_Offset,p3k_Cal_data.CR_Data[LOW_RANGE].Cal_Value_Offset);
+
+	Acess_FPGA(FPGA_Ext_RV_Control, 59900);
+	Acess_FPGA(FPGA_OS_Ref, Default_Cal_Prot_Ref);
+	Acess_FPGA(FPGA_Ext_R_Cont_Ref, 59577);
+	Acess_FPGA(FPGA_Current_Monitor_Out, NULL);
+	Acess_FPGA(FPGA_Control, Clear_VON_Latch);
+	Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, I_CC_High_0);
+	Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, I_CC_High_1);
+	Acess_FPGA(FPGA_H_Level_Slew_Rate, Default_Slew_Rate);
+	Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense | Acquire_Cont | Set_Protection_Ref_Adjust_ON | Set_Cx_Mode | Set_Load_OFF);
+
+	if(Data_tmp->CONF.Ext_Setting.Control)
+	{
+		Circuit_SW0 = E_Circuit_Switch_Control[(Disp_tmp->CURRMODE*6) + (Disp_tmp->IRange*2) + 0];
+		Circuit_SW1 = E_Circuit_Switch_Control[(Disp_tmp->CURRMODE*6) + (Disp_tmp->IRange*2) + 1];
+	}
+	else
+	{
+		Circuit_SW0 = I_Circuit_Switch_Control[(Disp_tmp->CURRMODE*6) + (Disp_tmp->IRange*2) + 0];
+		Circuit_SW1 = I_Circuit_Switch_Control[(Disp_tmp->CURRMODE*6) + (Disp_tmp->IRange*2) + 1];
+	}
+
+	if(Data_tmp->CURRMODE==CV_MODE)
+	{
+		if(Disp_tmp->IRange == IRange_High)		
+			IM_Range = H_VRANGE_IM_H_Range;
+		else if(Disp_tmp->IRange == Mid_RANGE)	
+			IM_Range = NULL;
+		else if(Disp_tmp->IRange == LOW_RANGE)	
+			IM_Range = H_VRANGE_IM_L_Range;
+
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |IM_Range);
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1);
+	}
+	else
+	{
+		if(Disp_tmp->VRange)	
+			VM_Range = 0;
+		else
+			VM_Range = VM_L_Range;
+
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1);
+	}
+
+	PEL3000_LED_Control( LED_LOAD, UTILITY.LOAD_CTL);
+
+	/* OCP Level */
+	tx_data.ADDRH = Machine_Command;
+	tx_data.ADDRL = Machine_OCP_Level;
+	SendTXData(&tx_data);
+
+	/* OPP Level */
+	tx_data.ADDRH = Machine_Command;
+	tx_data.ADDRL = Machine_OPP_Level;
+	SendTXData(&tx_data);
+	
+	/* OCP & OPP Setting(Load OFF/Limit) */
+	tx_data.ADDRH = Machine_Command;
+	tx_data.ADDRL = Machine_Prot_Status;
+	SendTXData(&tx_data);
+
+	/* Soft Start */
+	tx_data.ADDRH = Machine_Command;
+	tx_data.ADDRL = Machine_Soft_Start;
+	SendTXData(&tx_data);
+
+	/* Set Front and Rear IMON */
+	tx_data.ADDRH = Machine_Command;
+	tx_data.ADDRL = Machine_Setting_IMON;
+	SendTXData(&tx_data);
+
+	/* Parallel and External Setting */
+	tx_data.ADDRH = Para_Ext_Command;
+	tx_data.ADDRL = Para_Ext_Setting;
+	SendTXData(&tx_data);
+
+	tx_data.ADDRH = Cal_FPGA_Command;
+	tx_data.ADDRL = Cal_FPGA_Load_Meas_Default;
+	SendTXData(&tx_data);
+
+	/* Von Delay */
+	tx_data.ADDRH = Machine_Command;
+	tx_data.ADDRL = Machine_Von_Delay;
+	SendTXData(&tx_data);
+}
+
+void Small_Current(void)	/* FPGA Control Function */
+{
+	UWORD Dyna_LEVEL1 = 0;
+	UWORD FPGA_SetValue_H;
+	double Cal_Gain,Cal_Offset;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+	if( (Data_tmp->CURRMODE==CC_MODE)&&(Data_tmp->CC.STADYNA==Function_Static)&&(UTILITY.LOAD_CTL) )
+	{
+		Cal_Gain	= p3k_Cal_data.CC_Data[Data_tmp->IRange].Cal_Value_Gain;
+		Cal_Offset	= p3k_Cal_data.CC_Data[Data_tmp->IRange].Cal_Value_Offset;
+		Dyna_LEVEL1	= Small_Current_setting;
+		FPGA_SetValue_H = Step_To_CNT(Dyna_LEVEL1,Cal_Gain,Cal_Offset);
+		Acess_FPGA(FPGA_H_Level_Setting, FPGA_SetValue_H);
+		OSTimeDly(1);
+	}
+}
+
+#define CP_Error_Amount_Limit 0.002
+#define CR_Error_Amount_Limit 0.001
+#define CR_Limit_Step	200
+unsigned short New_Set_Count_To_FPGA;
+char CR_CP_Compensation(unsigned char Mode)
+{
+	double Cal_Gain,Cal_Offset;
+	double Error_Amount,Real_Value,Resolution;
+	double Real_Volt,Real_Curr,Real_Watt;
+	double Error_Amount_Count,Real_Meas_Count;
+	double Real_Siemens,Set_Count_To_FPGA;
+	double Compensation_Magnification,Compensation_Value;
+	double Error_Amount_Percent,Error_Amount_Count_Negative;
+	static double New_Set_Count_To_FPGA_Temp;
+	unsigned short Set_Count,Limit_Count;
+
+	P3k_Data_Str *Data_tmp = &P3k_Chan_Data;
+	
+	switch(Mode)
+	{
+		case CR_MODE:
+			Cal_Gain   = p3k_Cal_data.CR_Data[Data_tmp->IRange].Cal_Value_Gain;
+			Cal_Offset = p3k_Cal_data.CR_Data[Data_tmp->IRange].Cal_Value_Offset;			
+
+			Real_Volt = p3k_Measure_Data.Real_Volt;
+			Real_Curr = p3k_Measure_Data.Real_Curr;
+			Real_Siemens = Real_Curr / Real_Volt * 1000; 
+
+			if(Data_tmp->CR.ABSELECT==B_Value)	
+				Set_Count = Data_tmp->CR.STA[Data_tmp->IRange].VALUE2;
+			else
+				Set_Count = Data_tmp->CR.STA[Data_tmp->IRange].VALUE1;
+
+			if(UTILITY.SHORT_CTL)
+				Set_Count = (ptrMODEL_TYPE->CR)[0+(Data_tmp->IRange*10)].Max;
+
+			if(Compensation_Flag)
+			{
+				if(New_Set_Count_To_FPGA_Temp >= Cal_Offset)
+					Set_Count_To_FPGA = New_Set_Count_To_FPGA_Temp - Cal_Offset;
+				else
+					break;
+			}
+			else
+				Set_Count_To_FPGA = Set_Count * Cal_Gain;
+
+			Resolution = (ptrMODEL_TYPE->CR)[(Data_tmp->IRange*10)+(Data_tmp->CR.STADYNA*4)].Resolution;
+			Real_Value = (double)Set_Count * Resolution;
+
+		#if 0
+			Real_Meas_Count =  (Set_Count_To_FPGA * Real_Siemens) / Real_Value;
+
+			if(Set_Count_To_FPGA >= Real_Meas_Count)
+				Error_Amount_Count = Set_Count_To_FPGA - Real_Meas_Count;
+			else
+				Error_Amount_Count = Real_Meas_Count - Set_Count_To_FPGA;
+			
+			Error_Amount_Percent = Error_Amount_Count / Set_Count_To_FPGA;
+
+			Error_Amount_Count_Negative = Set_Count_To_FPGA - Real_Meas_Count;
+
+			if(Error_Amount_Percent > CR_Error_Amount_Limit)
+			{
+				Compensation_Flag = 1;
+				New_Set_Count_To_FPGA_Temp = Set_Count_To_FPGA + Error_Amount_Count_Negative + Cal_Offset;
+				if(New_Set_Count_To_FPGA_Temp < 0)
+					New_Set_Count_To_FPGA_Temp = 0;
+				New_Set_Count_To_FPGA = New_Set_Count_To_FPGA_Temp + 0.5;
+				Acess_FPGA(FPGA_H_Level_Setting, New_Set_Count_To_FPGA);
+			}
+		#else
+			Compensation_Magnification = Real_Value / Real_Siemens;
+			Compensation_Value = Set_Count_To_FPGA * Compensation_Magnification; 
+
+			if(Set_Count_To_FPGA >= Compensation_Value)
+				Error_Amount_Count = Set_Count_To_FPGA - Compensation_Value;
+			else
+				Error_Amount_Count = Compensation_Value - Set_Count_To_FPGA;
+			
+			Error_Amount_Percent = Error_Amount_Count / Set_Count_To_FPGA;	
+
+			Limit_Count = Cal_Gain * CR_Limit_Step;
+			
+			if(Error_Amount_Percent > CR_Error_Amount_Limit)
+			{
+				if(Limit_Count < Set_Count_To_FPGA)
+				{
+					Compensation_Flag = 1;
+					New_Set_Count_To_FPGA_Temp = Compensation_Value + Cal_Offset;
+					if(New_Set_Count_To_FPGA_Temp < 0)
+						New_Set_Count_To_FPGA_Temp = 0;
+					New_Set_Count_To_FPGA = New_Set_Count_To_FPGA_Temp + 0.5;
+					Acess_FPGA(FPGA_H_Level_Setting, New_Set_Count_To_FPGA);
+				}					
+			}
+		#endif
+		
+			break;		
+		case CP_MODE:	
+			Cal_Gain	= p3k_Cal_data.CP_Data[Data_tmp->IRange].Cal_Value_Gain;
+			Cal_Offset	= p3k_Cal_data.CP_Data[Data_tmp->IRange].Cal_Value_Offset;			
+
+			Real_Volt = p3k_Measure_Data.Real_Volt;
+			Real_Curr = p3k_Measure_Data.Real_Curr;
+			Real_Watt = Real_Volt * Real_Curr; 
+
+			if(Data_tmp->CP.ABSELECT == B_Value)	
+				Set_Count = Data_tmp->CP.STA[Data_tmp->IRange].VALUE2;
+			else
+				Set_Count = Data_tmp->CP.STA[Data_tmp->IRange].VALUE1;
+
+			if(UTILITY.SHORT_CTL)
+				Set_Count = (ptrMODEL_TYPE->CP)[0+(Data_tmp->IRange*10)].Max;
+
+			if(Compensation_Flag)
+			{
+				if(New_Set_Count_To_FPGA_Temp >= Cal_Offset)
+					Set_Count_To_FPGA = New_Set_Count_To_FPGA_Temp - Cal_Offset;
+				else
+					break;
+			}
+			else
+				Set_Count_To_FPGA = Set_Count * Cal_Gain;
+
+			Resolution = (ptrMODEL_TYPE->CP)[(Data_tmp->IRange*10)+(Data_tmp->CP.STADYNA*4)].Resolution;
+			Real_Value = Set_Count * Resolution;
+		#if 0
+			Real_Meas_Count =  (Set_Count_To_FPGA * Real_Watt) / Real_Value;
+
+			if(Set_Count_To_FPGA >= Real_Meas_Count)
+				Error_Amount_Count = Set_Count_To_FPGA - Real_Meas_Count;
+			else
+				Error_Amount_Count = Real_Meas_Count - Set_Count_To_FPGA;
+			
+			Error_Amount_Percent = Error_Amount_Count / Set_Count_To_FPGA;
+
+			Error_Amount_Count_Negative = Set_Count_To_FPGA - Real_Meas_Count;
+
+			if(Error_Amount_Percent > CP_Error_Amount_Limit)
+			{
+				Compensation_Flag = 1;
+				New_Set_Count_To_FPGA_Temp = Set_Count_To_FPGA + Error_Amount_Count_Negative + Cal_Offset;
+				if(New_Set_Count_To_FPGA_Temp < 0)
+					New_Set_Count_To_FPGA_Temp = 0;
+				New_Set_Count_To_FPGA = New_Set_Count_To_FPGA_Temp + 0.5;
+				Acess_FPGA(FPGA_H_Level_Setting, New_Set_Count_To_FPGA);
+			}
+		#else
+			Compensation_Magnification = Real_Value / Real_Watt;
+			Compensation_Value = Set_Count_To_FPGA * Compensation_Magnification; 
+
+			if(Set_Count_To_FPGA >= Compensation_Value)
+				Error_Amount_Count = Set_Count_To_FPGA - Compensation_Value;
+			else
+				Error_Amount_Count = Compensation_Value - Set_Count_To_FPGA;
+			
+			Error_Amount_Percent = Error_Amount_Count / Set_Count_To_FPGA;	
+			
+			if(Error_Amount_Percent > CR_Error_Amount_Limit)
+			{
+				Compensation_Flag = 1;
+				New_Set_Count_To_FPGA_Temp = Compensation_Value + Cal_Offset;
+				if(New_Set_Count_To_FPGA_Temp < 0)
+					New_Set_Count_To_FPGA_Temp = 0;
+				New_Set_Count_To_FPGA = New_Set_Count_To_FPGA_Temp + 0.5;
+				Acess_FPGA(FPGA_H_Level_Setting, New_Set_Count_To_FPGA);
+			}
+		#endif
+			break;
+		default:
+			break;
+	}
+	return 1;
+}
+
+void Compensation_Determine(void)
+{
+	double Cal_Gain,Cal_Offset;
+	double Resolution,Error_Amount;
+	double Measure_Value,Measure_Power_Value;
+	double OCP_Setting_Value,OPP_Setting_Value;
+	
+	static double Real_Curr_New,Real_Volt_New;
+	static double Real_Curr_Old,Real_Curr_Old_Positive_Limit,Real_Curr_Old_Negative_Limit;
+	static double Real_Volt_Old,Real_Volt_Old_Positive_Limit,Real_Volt_Old_Negative_Limit;
+		
+	unsigned short Set_Count,Set_Count_To_FPGA;
+
+	P3k_Data_Str *Data_tmp = &P3k_Chan_Data;
+
+	if(CR_MODE == Data_tmp->CURRMODE)
+	{
+		Cal_Gain   = p3k_Cal_data.CR_Data[Data_tmp->IRange].Cal_Value_Gain;
+		Cal_Offset = p3k_Cal_data.CR_Data[Data_tmp->IRange].Cal_Value_Offset;
+
+		if(Data_tmp->CR.ABSELECT == B_Value)	
+			Set_Count = Data_tmp->CR.STA[Data_tmp->IRange].VALUE2;
+		else
+			Set_Count = Data_tmp->CR.STA[Data_tmp->IRange].VALUE1;	
+
+		if(UTILITY.SHORT_CTL)
+			Set_Count = (ptrMODEL_TYPE->CR)[0+(Data_tmp->IRange*10)].Max;
+	}
+	else
+	{
+		Cal_Gain   = p3k_Cal_data.CP_Data[Data_tmp->IRange].Cal_Value_Gain;
+		Cal_Offset = p3k_Cal_data.CP_Data[Data_tmp->IRange].Cal_Value_Offset;
+
+		if(Data_tmp->CP.ABSELECT == B_Value)	
+			Set_Count = Data_tmp->CP.STA[Data_tmp->IRange].VALUE2;
+		else
+			Set_Count = Data_tmp->CP.STA[Data_tmp->IRange].VALUE1;
+
+		if(UTILITY.SHORT_CTL)
+			Set_Count = (ptrMODEL_TYPE->CP)[0+(Data_tmp->IRange*10)].Max;
+	}
+	
+	Real_Curr_New = p3k_Measure_Data.Real_Curr;
+	Real_Volt_New = p3k_Measure_Data.Real_Volt;
+
+	Real_Curr_Old_Positive_Limit = Real_Curr_Old + (Real_Curr_Old * 0.05);
+	Real_Curr_Old_Negative_Limit = Real_Curr_Old - (Real_Curr_Old * 0.05);
+	
+	Real_Volt_Old_Positive_Limit = Real_Volt_Old + (Real_Volt_Old * 0.05);
+	Real_Volt_Old_Negative_Limit = Real_Volt_Old - (Real_Volt_Old * 0.05);	
+
+	if((p3k_Measure_Data.VOLT < 0.5) || (p3k_Measure_Data.Alarm == UnReg_Alarm))
+	{
+		New_Set_Count_To_FPGA	= 0;
+		Compensation_Flag		= 0;
+		Compensation_Count		= 0;
+		Error_Amount_Flag		= 0;
+		Set_Count_To_FPGA		= Step_To_CNT(Set_Count,Cal_Gain,Cal_Offset);
+		Acess_FPGA(FPGA_H_Level_Setting, Set_Count_To_FPGA);
+	}
+	else
+	{
+		Measure_Power_Value = p3k_Measure_Data.Real_Volt * p3k_Measure_Data.Real_Curr;
+		
+		OCP_Setting_Value = Data_tmp->PROT.OCP[Data_tmp->IRange] * ptrMODEL_TYPE->PROT[Data_tmp->IRange].Resolution;
+
+		if(Data_tmp->IRange == LOW_RANGE)
+		{
+			if((Data_tmp->IRange == LOW_RANGE) && (Data_tmp->PROT.OPP[HIGH_RANGE] > (ptrMODEL_TYPE->PROT[5].Max*0.3)))
+				OPP_Setting_Value =  ptrMODEL_TYPE->PROT[HIGH_RANGE+3].Max * ptrMODEL_TYPE->PROT[HIGH_RANGE+3].Resolution * 0.3;
+			else
+				OPP_Setting_Value = Data_tmp->PROT.OPP[Data_tmp->IRange] * ptrMODEL_TYPE->PROT[Data_tmp->IRange+3].Resolution;
+		}
+		else
+			OPP_Setting_Value = Data_tmp->PROT.OPP[HIGH_RANGE] * ptrMODEL_TYPE->PROT[HIGH_RANGE+3].Resolution;
+
+		if((p3k_Measure_Data.Real_Curr < OCP_Setting_Value) && (p3k_Measure_Data.Alarm != OCP_Alarm))
+		{	
+			if((Measure_Power_Value < OPP_Setting_Value) && (p3k_Measure_Data.Alarm != OPP_Alarm))
+			{
+				Real_Curr_Old = Real_Curr_New;	
+				Real_Volt_Old = Real_Volt_New;
+
+				if(!Compensation_Count)
+				{
+					Compensation_Count = 1;
+					if(Data_tmp->CONF.SOFT_START > 0)
+					{
+						if(Data_tmp->CONF.SOFT_START > 20)
+							OSTimeDlyHMSM(0,0,0,Data_tmp->CONF.SOFT_START);
+						else
+							OSTimeDly(2);
+					}
+				}
+
+				if(((Real_Curr_New <= Real_Curr_Old_Positive_Limit)&&(Real_Curr_New >= Real_Curr_Old_Negative_Limit)) && ((Real_Volt_New < Real_Volt_Old_Positive_Limit)&&(Real_Volt_New > Real_Volt_Old_Negative_Limit)))
+				{				
+					Error_Amount_Flag++;
+					
+					if((UTILITY.LOAD_CTL || UTILITY.SHORT_CTL) && (Error_Amount_Flag > 5))
+					{	
+						CR_CP_Compensation(Data_tmp->CURRMODE); 
+						Error_Amount_Flag = 4;
+					}
+				}
+				else 
+					Error_Amount_Flag = 0;
+			}
+		}
+	}
+}
+
+void Timer_Setting(UWORD *T1_RANGE, UWORD *T2_RANGE, UWORD *Timer1, UWORD *Timer2)
+{
+	unsigned char Frequency_Range;
+	unsigned short Frequency_Count,Duty;
+	double Resolution,Real_Frequency,Real_Total_Timer,Real_Timer1,Real_Timer2;
+	
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+	if(Data_tmp->CONF.Dyna_Time)
+	{
+		switch(Data_tmp->CURRMODE)
+		{
+			case CC_MODE:
+				Frequency_Range = Data_tmp->CC.DYNA[Data_tmp->IRange].Frequency_Range;
+				Frequency_Count = Data_tmp->CC.DYNA[Data_tmp->IRange].Frequency;
+				Duty = Data_tmp->CC.DYNA[Data_tmp->IRange].Duty;
+				break;
+			case CR_MODE:
+				Frequency_Range = Data_tmp->CR.DYNA[Data_tmp->IRange].Frequency_Range;
+				Frequency_Count = Data_tmp->CR.DYNA[Data_tmp->IRange].Frequency;
+				Duty = Data_tmp->CR.DYNA[Data_tmp->IRange].Duty;
+				break;
+			case CP_MODE:
+				Frequency_Range = Data_tmp->CP.DYNA[Data_tmp->IRange].Frequency_Range;
+				Frequency_Count = Data_tmp->CP.DYNA[Data_tmp->IRange].Frequency;
+				Duty = Data_tmp->CP.DYNA[Data_tmp->IRange].Duty;
+				break;
+			default:
+				break;
+		}
+
+		if(Frequency_Range == Dyn_Freq_TimeBase_100Hz)
+			Resolution = 100;
+		else if(Frequency_Range == Dyn_Freq_TimeBase_10Hz)
+			Resolution = 10;
+		else if(Frequency_Range == Dyn_Freq_TimeBase_1Hz)
+			Resolution = 1;
+		else
+			Resolution = 0.1;
+
+		Real_Frequency = Frequency_Count * Resolution;
+		Real_Total_Timer = (1 / Real_Frequency) * 1000;
+		Real_Timer1 = Real_Total_Timer * Duty * 0.01 * 0.1;
+		Real_Timer2 = Real_Total_Timer - Real_Timer1;
+
+		if(Real_Timer2 < 0.025)
+			Real_Timer2 = 0.025;
+		
+		if((Real_Timer1 >= 0.025) && (Real_Timer1 <= 10))
+		{
+			*T1_RANGE = Dyn_TimeBase_1us;
+			*Timer1 = Real_Timer1 / 0.001;
+		}
+		else if((Real_Timer1 >= 11) && (Real_Timer1 <= 1000))
+		{
+			*T1_RANGE = Dyn_TimeBase_1ms;
+			*Timer1 = Real_Timer1;
+		}	
+		
+		if((Real_Timer2 >= 0.025) && (Real_Timer2 <= 10))
+		{
+			*T2_RANGE = Dyn_TimeBase_1us;
+			*Timer2 = Real_Timer2 / 0.001;
+		}
+		else if((Real_Timer2 >= 11) && (Real_Timer2 <= 1000))
+		{
+			*T2_RANGE = Dyn_TimeBase_1ms;
+			*Timer2 = Real_Timer2;
+		}	
+	}
+	else
+	{
+		switch(Data_tmp->CURRMODE)
+		{
+			case CC_MODE:
+				*T1_RANGE = Data_tmp->CC.DYNA[Data_tmp->IRange].T1_RANGE;
+				*T2_RANGE = Data_tmp->CC.DYNA[Data_tmp->IRange].T2_RANGE;
+				*Timer1 = Data_tmp->CC.DYNA[Data_tmp->IRange].TIME1;
+				*Timer2 = Data_tmp->CC.DYNA[Data_tmp->IRange].TIME2;
+				break;
+			case CR_MODE:
+				*T1_RANGE = Data_tmp->CR.DYNA[Data_tmp->IRange].T1_RANGE;
+				*T2_RANGE = Data_tmp->CR.DYNA[Data_tmp->IRange].T2_RANGE;
+				*Timer1 = Data_tmp->CR.DYNA[Data_tmp->IRange].TIME1;
+				*Timer2 = Data_tmp->CR.DYNA[Data_tmp->IRange].TIME2;
+				break;
+			case CP_MODE:
+				*T1_RANGE = Data_tmp->CP.DYNA[Data_tmp->IRange].T1_RANGE;
+				*T2_RANGE = Data_tmp->CP.DYNA[Data_tmp->IRange].T2_RANGE;
+				*Timer1 = Data_tmp->CP.DYNA[Data_tmp->IRange].TIME1;
+				*Timer2 = Data_tmp->CP.DYNA[Data_tmp->IRange].TIME2;
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+#define Load_Limit_Ratio 	0.1
+#define Minimum_Output 		0.001
+#define Minimum_Current_H_L 50
+#define Minimum_Current_M 	150
+UBYTE Minimum_Current(UBYTE MODE,UWORD *LEVEL1,UWORD *LEVEL2)
+{
+	unsigned short Level1_Min=0,Level2_Min=0;
+	unsigned short Load_Off_Value;
+	unsigned char Result=0;
+	
+	P3k_Data_Str *Data_tmp = &P3k_Chan_Data;
+
+	switch(MODE)
+	{
+		case CC_MODE:	
+			if(Data_tmp->CC.STADYNA)
+			{
+				if((*LEVEL1 < Load_Limit_Ratio * (ptrMODEL_TYPE->CC)[0+(Data_tmp->IRange*10)+4].Max)||(*LEVEL2 < Load_Limit_Ratio * (ptrMODEL_TYPE->CC)[1+(Data_tmp->IRange*10)+4].Max))
+					Result = 1;
+
+				if(Data_tmp->IRange == HIGH_RANGE || Data_tmp->IRange == LOW_RANGE)
+				{
+					if(*LEVEL1 < Minimum_Current_H_L)	
+						*LEVEL1 = Minimum_Current_H_L;	
+					
+					if(*LEVEL2 < Minimum_Current_H_L)	
+						*LEVEL2 = Minimum_Current_H_L;			
+				}
+				else
+				{
+					if(*LEVEL1 < Minimum_Current_M) 
+						*LEVEL1 = Minimum_Current_M;				
+				
+					if(*LEVEL2 < Minimum_Current_M) 
+						*LEVEL2 = Minimum_Current_M;			
+				}
+			}
+			else
+			{
+				if(*LEVEL1 < Load_Limit_Ratio * (ptrMODEL_TYPE->CC)[0+(Data_tmp->IRange*10)+4].Max)
+					Result = 1;
+				
+				if((Data_tmp->IRange == HIGH_RANGE) || (Data_tmp->IRange == LOW_RANGE))
+				{
+					if(Data_tmp->IRange == HIGH_RANGE)
+					{
+						if(*LEVEL1 <= Minimum_Current_H_L)
+							Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CC_Data[2].Cal_Value_Gain,p3k_Cal_data.CC_Data[2].Cal_Value_Offset);
+						else
+							Load_Off_Value = Step_To_CNT(Minimum_Current_H_L, p3k_Cal_data.CC_Data[0].Cal_Value_Gain,p3k_Cal_data.CC_Data[0].Cal_Value_Offset);
+
+						Acess_FPGA(CC_H_Load_Off, Load_Off_Value);
+					}
+					else
+					{
+						if(*LEVEL1 <= Minimum_Current_H_L)
+							Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CC_Data[0].Cal_Value_Gain,p3k_Cal_data.CC_Data[0].Cal_Value_Offset);
+						else
+							Load_Off_Value = Step_To_CNT(Minimum_Current_H_L, p3k_Cal_data.CC_Data[0].Cal_Value_Gain,p3k_Cal_data.CC_Data[0].Cal_Value_Offset);
+
+						Acess_FPGA(CC_L_Load_Off, Load_Off_Value);
+					}
+				}	
+				else
+				{
+					if(*LEVEL1 <= Minimum_Current_M) 
+						Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CC_Data[1].Cal_Value_Gain,p3k_Cal_data.CC_Data[1].Cal_Value_Offset);
+					else
+						Load_Off_Value = Step_To_CNT(Minimum_Current_M, p3k_Cal_data.CC_Data[0].Cal_Value_Gain,p3k_Cal_data.CC_Data[0].Cal_Value_Offset);
+
+					Acess_FPGA(CC_M_Load_Off, Load_Off_Value);
+				}				
+			}
+			break;
+		case CR_MODE:
+			if(Data_tmp->CR.STADYNA)
+			{
+				if((*LEVEL1 < Load_Limit_Ratio * (ptrMODEL_TYPE->CR)[0+(Data_tmp->IRange*10)+4].Max)||(*LEVEL2 < Load_Limit_Ratio * (ptrMODEL_TYPE->CR)[1+(Data_tmp->IRange*10)+4].Max))
+					Result = 1;				
+
+				if(Data_tmp->IRange == HIGH_RANGE || Data_tmp->IRange == LOW_RANGE)
+				{
+					if(*LEVEL1 < Minimum_Current_H_L)	
+						*LEVEL1 = Minimum_Current_H_L;	
+					
+					if(*LEVEL2 < Minimum_Current_H_L)	
+						*LEVEL2 = Minimum_Current_H_L;			
+				}
+				else
+				{
+					if(*LEVEL1 < Minimum_Current_M) 
+						*LEVEL1 = Minimum_Current_M;				
+				
+					if(*LEVEL2 < Minimum_Current_M) 
+						*LEVEL2 = Minimum_Current_M;			
+				}
+			}
+			else
+			{
+				if(*LEVEL1 < Load_Limit_Ratio * (ptrMODEL_TYPE->CR)[0+(Data_tmp->IRange*10)+4].Max)
+					Result = 1;
+				
+				if((Data_tmp->IRange == HIGH_RANGE) || (Data_tmp->IRange == LOW_RANGE))
+				{
+					if(Data_tmp->IRange == HIGH_RANGE)
+					{
+						if(*LEVEL1 <= Minimum_Current_H_L)
+							Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CR_Data[2].Cal_Value_Gain,p3k_Cal_data.CR_Data[2].Cal_Value_Offset);
+						else
+							Load_Off_Value = Step_To_CNT(Minimum_Current_H_L, p3k_Cal_data.CR_Data[0].Cal_Value_Gain,p3k_Cal_data.CR_Data[0].Cal_Value_Offset);
+
+						Acess_FPGA(CR_H_Load_Off, Load_Off_Value);
+					}
+					else
+					{
+						if(*LEVEL1 <= Minimum_Current_H_L)
+							Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CR_Data[0].Cal_Value_Gain,p3k_Cal_data.CR_Data[0].Cal_Value_Offset);
+						else
+							Load_Off_Value = Step_To_CNT(Minimum_Current_H_L, p3k_Cal_data.CR_Data[0].Cal_Value_Gain,p3k_Cal_data.CR_Data[0].Cal_Value_Offset);
+
+						Acess_FPGA(CR_L_Load_Off, Load_Off_Value);
+					}
+				}
+				else
+				{
+					if(*LEVEL1 <= Minimum_Current_M) 
+						Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CR_Data[1].Cal_Value_Gain,p3k_Cal_data.CR_Data[1].Cal_Value_Offset);
+					else
+						Load_Off_Value = Step_To_CNT(Minimum_Current_M, p3k_Cal_data.CR_Data[0].Cal_Value_Gain,p3k_Cal_data.CR_Data[0].Cal_Value_Offset);
+
+					Acess_FPGA(CR_M_Load_Off, Load_Off_Value);
+				}					
+			}		
+		
+			break;
+		case CP_MODE:
+			if(Data_tmp->CP.STADYNA)
+			{
+				if((*LEVEL1 < Load_Limit_Ratio * (ptrMODEL_TYPE->CP)[0+(Data_tmp->IRange*10)+4].Max)||(*LEVEL2 < Load_Limit_Ratio * (ptrMODEL_TYPE->CP)[1+(Data_tmp->IRange*10)+4].Max))
+					Result = 1;	
+				
+				if(Data_tmp->IRange == HIGH_RANGE || Data_tmp->IRange == LOW_RANGE)
+				{
+					if(*LEVEL1 < Minimum_Current_H_L)	
+						*LEVEL1 = Minimum_Current_H_L;
+					
+					if(*LEVEL2 < Minimum_Current_H_L)
+						*LEVEL2 = Minimum_Current_H_L;
+				}
+				else
+				{
+					if(*LEVEL1 < Minimum_Current_M) 
+						*LEVEL1 = Minimum_Current_M;				
+				
+					if(*LEVEL2 < Minimum_Current_M) 
+						*LEVEL2 = Minimum_Current_M;			
+				}
+			}
+			else
+			{
+				if(*LEVEL1 < Load_Limit_Ratio * (ptrMODEL_TYPE->CP)[0+(Data_tmp->IRange*10)+4].Max)
+					Result = 1;
+				
+				if((Data_tmp->IRange == HIGH_RANGE) || (Data_tmp->IRange == LOW_RANGE))
+				{
+					if(Data_tmp->IRange == HIGH_RANGE)
+					{
+						if(*LEVEL1 <= Minimum_Current_H_L)
+							Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CP_Data[2].Cal_Value_Gain,p3k_Cal_data.CP_Data[2].Cal_Value_Offset);
+						else
+							Load_Off_Value = Step_To_CNT(Minimum_Current_H_L, p3k_Cal_data.CP_Data[0].Cal_Value_Gain,p3k_Cal_data.CP_Data[0].Cal_Value_Offset);
+
+						Acess_FPGA(CP_H_Load_Off, Load_Off_Value);
+					}
+					else
+					{
+						if(*LEVEL1 <= Minimum_Current_H_L)
+							Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CP_Data[0].Cal_Value_Gain,p3k_Cal_data.CP_Data[0].Cal_Value_Offset);
+						else
+							Load_Off_Value = Step_To_CNT(Minimum_Current_H_L, p3k_Cal_data.CP_Data[0].Cal_Value_Gain,p3k_Cal_data.CP_Data[0].Cal_Value_Offset);
+
+						Acess_FPGA(CP_L_Load_Off, Load_Off_Value);
+					}
+				}
+				else
+				{
+					if(*LEVEL1 <= Minimum_Current_M) 
+						Load_Off_Value = Step_To_CNT(*LEVEL1, p3k_Cal_data.CP_Data[1].Cal_Value_Gain,p3k_Cal_data.CP_Data[1].Cal_Value_Offset);
+					else
+						Load_Off_Value = Step_To_CNT(Minimum_Current_M, p3k_Cal_data.CP_Data[0].Cal_Value_Gain,p3k_Cal_data.CP_Data[0].Cal_Value_Offset);
+
+					Acess_FPGA(CP_M_Load_Off, Load_Off_Value);
+				}				
+			}		
+			
+			break;
+		default:
+			Result = 0;
+			break;
+	}
+	
+	return Result;
+}
+
+void Compensation_Parallel_DA(UWORD *Value_H,UWORD *Value_L)
+{
+	double Magnification;
+
+	P3k_Parallel_Str *Parallel_Ptr = &P3k_Chan_Data.CONF.Para_Data;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+	if(Parallel_Ptr->Booster_Number)
+	{
+		if(Data_tmp->IRange == LOW_RANGE)
+			Magnification = 1;
+		else
+			Magnification = (ptrMODEL_TYPE->Compasation_DA_Magnification)[(Parallel_Ptr->Booster_Number-1) + 4].Magnification;
+	}
+	else
+		Magnification = (ptrMODEL_TYPE->Compasation_DA_Magnification)[Parallel_Ptr->Parallel_Number-1].Magnification;
+
+	*Value_H *= Magnification;
+	*Value_L *= Magnification;
+}
+
+
+void FPGA_Ctrl(void)	/* FPGA Control Function */
+{
+	unsigned short  VM_Range = 0,Circuit_SW0 = 0,Circuit_SW1 = 0;
+	UBYTE SRH,SRL;
+	double Cal_Gain,Cal_Offset;
+	UWORD Dyna_LEVEL1 = 0;
+	UWORD Dyna_LEVEL2 = 0;
+	UWORD Dyna_SRUP_RANGE = 0;
+	UWORD Dyna_SRDN_RANGE = 0;
+	UWORD Dyna_T1_RANGE = 0;
+	UWORD Dyna_T2_RANGE = 0;
+	UWORD Dyna_SRUP = 0;
+	UWORD Dyna_SRDN = 0;
+	UWORD Dyna_T1 = 0;
+	UWORD Dyna_T2 = 0;
+	UWORD Function_Mode = 0;
+	UWORD Voltage_H_Temp,Voltage_L_Temp;
+	UWORD FPGA_SetValue_H,FPGA_SetValue_L;
+	unsigned short Response_Setting;
+
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	
+	if(Data_tmp->VRange)	
+		VM_Range = 0;
+	else
+		VM_Range = VM_L_Range;
+	
+	Response_Setting = Response_Select(Data_tmp->CURRMODE,Data_tmp->CONF.Response);
+
+	switch(Data_tmp->CURRMODE)
+	{
+		default:/*CC_MODE:*/
+			Debug_printf("FPGA_Ctrl_Cal_Data_Error\n");
+		case CC_MODE:
+			Cal_Gain	= p3k_Cal_data.CC_Data[Data_tmp->IRange].Cal_Value_Gain;
+			Cal_Offset	= p3k_Cal_data.CC_Data[Data_tmp->IRange].Cal_Value_Offset;
+			break;
+		case CR_MODE:
+			Cal_Gain	= p3k_Cal_data.CR_Data[Data_tmp->IRange].Cal_Value_Gain;
+			Cal_Offset	= p3k_Cal_data.CR_Data[Data_tmp->IRange].Cal_Value_Offset;
+			break;
+		case CV_MODE:
+			Cal_Gain	= p3k_Cal_data.CV_Data[Data_tmp->VRange].Cal_Value_Gain;
+			Cal_Offset	= p3k_Cal_data.CV_Data[Data_tmp->VRange].Cal_Value_Offset;
+			break;
+		case CP_MODE:
+			Cal_Gain	= p3k_Cal_data.CP_Data[Data_tmp->IRange].Cal_Value_Gain;
+			Cal_Offset	= p3k_Cal_data.CP_Data[Data_tmp->IRange].Cal_Value_Offset;
+			break;
+	}
+
+	if(Data_tmp->CONF.Ext_Setting.Control)
+	{
+		Circuit_SW0 = E_Circuit_Switch_Control[(Data_tmp->CURRMODE*6) + (Data_tmp->IRange*2) + 0];
+		Circuit_SW1 = E_Circuit_Switch_Control[(Data_tmp->CURRMODE*6) + (Data_tmp->IRange*2) + 1];
+	}
+	else
+	{
+		Circuit_SW0 = I_Circuit_Switch_Control[(Data_tmp->CURRMODE*6) + (Data_tmp->IRange*2) + 0];
+		Circuit_SW1 = I_Circuit_Switch_Control[(Data_tmp->CURRMODE*6) + (Data_tmp->IRange*2) + 1];
+	}
+	
+	if(	(CC_MODE==Data_tmp->CURRMODE && Data_tmp->CC.STADYNA)||(CR_MODE==Data_tmp->CURRMODE && Data_tmp->CR.STADYNA)||(CP_MODE==Data_tmp->CURRMODE && Data_tmp->CP.STADYNA) )
+	{
+		Function_Mode = Set_Dynamic_Mode;
+
+		switch(Data_tmp->CURRMODE)
+		{
+			default:/* CC_MODE */
+				Debug_printf("CX_Dyna_Error\n");
+			case CC_MODE:
+				if(UTILITY.SHORT_CTL)
+				{
+					Dyna_LEVEL1	= (ptrMODEL_TYPE->CC)[0+(Data_tmp->IRange*10)+4].Max;
+					Dyna_LEVEL2	= (ptrMODEL_TYPE->CC)[1+(Data_tmp->IRange*10)+4].Max;
+					Dyna_SRUP = (ptrMODEL_TYPE->CC)[2+(Data_tmp->IRange*10)+4].Max * 20;
+					Dyna_SRDN = (ptrMODEL_TYPE->CC)[3+(Data_tmp->IRange*10)+4].Max * 20;
+					Dyna_SRUP_RANGE	= SlewRate_H_Range;
+					Dyna_SRDN_RANGE	= SlewRate_H_Range;
+				}
+				else
+				{
+					Dyna_LEVEL1	= Data_tmp->CC.DYNA[Data_tmp->IRange].LEVEL1;
+					
+					if(Data_tmp->CONF.Dyna_Level)
+						Dyna_LEVEL2	= Data_tmp->CC.DYNA[Data_tmp->IRange].LEVEL1 * Data_tmp->CC.DYNA[Data_tmp->IRange].Level_Percent * 0.001;
+					else
+						Dyna_LEVEL2	= Data_tmp->CC.DYNA[Data_tmp->IRange].LEVEL2;
+
+					Dyna_SRUP = Data_tmp->CC.DYNA[Data_tmp->IRange].SLEWRATEUP * 20;
+					Dyna_SRDN = Data_tmp->CC.DYNA[Data_tmp->IRange].SLEWRATEDN * 20;
+					Dyna_SRUP_RANGE	= Data_tmp->CC.DYNA[Data_tmp->IRange].SLEWRATEUP_RANGE;
+					Dyna_SRDN_RANGE	= Data_tmp->CC.DYNA[Data_tmp->IRange].SLEWRATEDN_RANGE;
+
+					if((Minimum_Current(CC_MODE,&Dyna_LEVEL1,&Dyna_LEVEL2) == 1) && (Data_tmp->IRange == Mid_RANGE))
+						Response_Setting = CC_CR_CP_Response_1_5;
+				}
+				Timer_Setting(&Dyna_T1_RANGE, &Dyna_T2_RANGE, &Dyna_T1, &Dyna_T2);
+				break;
+			case CR_MODE:
+				if(UTILITY.SHORT_CTL)
+				{
+					Dyna_LEVEL1	= (ptrMODEL_TYPE->CR)[0+(Data_tmp->IRange*10)+4].Max;
+					Dyna_LEVEL2	= (ptrMODEL_TYPE->CR)[1+(Data_tmp->IRange*10)+4].Max;
+					Dyna_SRUP = ((ptrMODEL_TYPE->CR)[2+(Data_tmp->IRange*10)+4].Max * 20)/10;
+					Dyna_SRDN = ((ptrMODEL_TYPE->CR)[3+(Data_tmp->IRange*10)+4].Max * 20)/10;
+					Dyna_SRUP_RANGE	= SlewRate_H_Range;
+					Dyna_SRDN_RANGE	= SlewRate_H_Range;
+				}
+				else
+				{
+					Dyna_LEVEL1	= Data_tmp->CR.DYNA[Data_tmp->IRange].LEVEL1;
+
+					if(Data_tmp->CONF.Dyna_Level)
+						Dyna_LEVEL2	= Data_tmp->CR.DYNA[Data_tmp->IRange].LEVEL1 * Data_tmp->CR.DYNA[Data_tmp->IRange].Level_Percent * 0.001;
+					else
+						Dyna_LEVEL2	= Data_tmp->CR.DYNA[Data_tmp->IRange].LEVEL2;
+
+					Dyna_SRUP = (Data_tmp->CR.DYNA[Data_tmp->IRange].SLEWRATEUP * 20)/10;
+					Dyna_SRDN = (Data_tmp->CR.DYNA[Data_tmp->IRange].SLEWRATEDN * 20)/10;
+					Dyna_SRUP_RANGE	= Data_tmp->CR.DYNA[Data_tmp->IRange].SLEWRATEUP_RANGE;
+					Dyna_SRDN_RANGE	= Data_tmp->CR.DYNA[Data_tmp->IRange].SLEWRATEDN_RANGE;
+
+					if((Minimum_Current(CR_MODE,&Dyna_LEVEL1,&Dyna_LEVEL2)==1) && (Data_tmp->IRange == Mid_RANGE))
+						Response_Setting = CC_CR_CP_Response_1_5;
+				}
+				Timer_Setting(&Dyna_T1_RANGE, &Dyna_T2_RANGE, &Dyna_T1, &Dyna_T2);
+				break;
+			case CP_MODE:
+				if(UTILITY.SHORT_CTL)
+				{
+					Dyna_LEVEL1	= (ptrMODEL_TYPE->CP)[0+(Data_tmp->IRange*10)+4].Max;
+					Dyna_LEVEL2	= (ptrMODEL_TYPE->CP)[1+(Data_tmp->IRange*10)+4].Max;
+				}
+				else
+				{
+					Dyna_LEVEL1	= Data_tmp->CP.DYNA[Data_tmp->IRange].LEVEL1;
+					
+					if(Data_tmp->CONF.Dyna_Level)
+						Dyna_LEVEL2	= Data_tmp->CP.DYNA[Data_tmp->IRange].LEVEL1 * Data_tmp->CP.DYNA[Data_tmp->IRange].Level_Percent * 0.001;
+					else
+						Dyna_LEVEL2	= Data_tmp->CP.DYNA[Data_tmp->IRange].LEVEL2;
+
+					if((Minimum_Current(CP_MODE,&Dyna_LEVEL1,&Dyna_LEVEL2)==1) && (Data_tmp->IRange == Mid_RANGE))
+						Response_Setting = CC_CR_CP_Response_1_5;
+				}
+				Dyna_SRUP = CP_SR_CNT;
+				Dyna_SRDN = CP_SR_CNT;
+				Dyna_SRUP_RANGE	= CP_SR_Range;
+				Dyna_SRDN_RANGE	= CP_SR_Range;
+					
+				Timer_Setting(&Dyna_T1_RANGE, &Dyna_T2_RANGE, &Dyna_T1, &Dyna_T2);
+				break;
+		}			
+		if(Dyna_LEVEL1 < Dyna_LEVEL2)
+		{
+			SRH = Dyna_SRDN_RANGE;
+			SRL = Dyna_SRUP_RANGE;
+		}
+		else
+		{
+			SRH = Dyna_SRUP_RANGE;
+			SRL = Dyna_SRDN_RANGE;
+		}
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+		Acess_FPGA(FPGA_L_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+		
+		if(Dyna_T1_RANGE)	
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1 |Time_Unit_1mS |Response_Setting |SRH |TrigOut_ON);
+		else
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1 |Time_Unit_1uS |Response_Setting |SRH |TrigOut_ON);
+
+		if(Dyna_T2_RANGE)	
+			Acess_FPGA(FPGA_L_Circuit_Switch_Control_1, Circuit_SW1 |Time_Unit_1mS |Response_Setting |SRL |TrigOut_ON);
+		else
+			Acess_FPGA(FPGA_L_Circuit_Switch_Control_1, Circuit_SW1 |Time_Unit_1uS |Response_Setting |SRL |TrigOut_ON);
+
+		if(Dyna_LEVEL1 < Dyna_LEVEL2)
+		{
+			Acess_FPGA(FPGA_H_Level_Slew_Rate, Dyna_SRDN);
+			Acess_FPGA(FPGA_L_Level_Slew_Rate, Dyna_SRUP);
+		}
+		else
+		{
+			Acess_FPGA(FPGA_H_Level_Slew_Rate, Dyna_SRUP);
+			Acess_FPGA(FPGA_L_Level_Slew_Rate, Dyna_SRDN);
+		}
+
+		FPGA_SetValue_H = Step_To_CNT(Dyna_LEVEL1,Cal_Gain,Cal_Offset);
+		FPGA_SetValue_L = Step_To_CNT(Dyna_LEVEL2,Cal_Gain,Cal_Offset);
+
+		Compensation_Parallel_DA(&FPGA_SetValue_H,&FPGA_SetValue_L);
+		
+		Acess_FPGA(FPGA_H_T1_Duration, Dyna_T1);
+		Acess_FPGA(FPGA_L_T2_Duration, Dyna_T2);
+		Acess_FPGA(FPGA_H_Level_Setting, FPGA_SetValue_H);
+		Acess_FPGA(FPGA_L_Level_Setting, FPGA_SetValue_L);
+	}
+	else	/*Static Mode*/
+	{
+		Function_Mode = Set_Cx_Mode;
+		switch(Data_tmp->CURRMODE)
+		{
+			default:/*CC_MODE:*/
+				Debug_printf("FPGA_Ctrl_Static_Error\n");
+			case CC_MODE:
+				if(UTILITY.SHORT_CTL)
+					Dyna_LEVEL1 = (ptrMODEL_TYPE->CC)[0+(Data_tmp->IRange*10)].Max;
+				else
+				{
+					if(Data_tmp->CC.ABSELECT==B_Value)	
+						Dyna_LEVEL1 = Data_tmp->CC.STA[Data_tmp->IRange].VALUE2;
+					else
+						Dyna_LEVEL1 = Data_tmp->CC.STA[Data_tmp->IRange].VALUE1;
+				}
+				Dyna_SRUP = Data_tmp->CC.STA[Data_tmp->IRange].SLEWRATEUP * 20;
+				SRH = Data_tmp->CC.STA[Data_tmp->IRange].SLEWRATEUP_RANGE;
+				
+				if((Minimum_Current(CC_MODE,&Dyna_LEVEL1,&Dyna_LEVEL2)==1) && (Data_tmp->IRange == Mid_RANGE))
+					Response_Setting = CC_CR_CP_Response_1_5;				
+				break;
+			case CR_MODE:
+				if(UTILITY.SHORT_CTL)
+					Dyna_LEVEL1 =  (ptrMODEL_TYPE->CR)[0+(Data_tmp->IRange*10)].Max;
+				else
+				{
+					if(Data_tmp->CR.ABSELECT==B_Value)
+						Dyna_LEVEL1 = Data_tmp->CR.STA[Data_tmp->IRange].VALUE2;
+					else
+						Dyna_LEVEL1 = Data_tmp->CR.STA[Data_tmp->IRange].VALUE1;
+				}	
+				Dyna_SRUP = (Data_tmp->CR.STA[Data_tmp->IRange].SLEWRATEUP * 20)/10;
+				SRH = Data_tmp->CR.STA[Data_tmp->IRange].SLEWRATEUP_RANGE;	
+
+				if((Minimum_Current(CR_MODE,&Dyna_LEVEL1,&Dyna_LEVEL2)==1) && (Data_tmp->IRange == Mid_RANGE))
+					Response_Setting = CC_CR_CP_Response_1_5;				
+				break;
+			case CV_MODE:
+				if(Data_tmp->CV.RESPONSE == 1)
+					Response_Setting |= NULL;
+				else
+					Response_Setting |= CV_Response_L;
+
+			#if 0		
+				if(VRange_High==Data_tmp->VRange)
+					Dyna_SRUP = 600;
+				else
+					Dyna_SRUP = 6000;
+			#else
+				if(VRange_High==Data_tmp->VRange)
+				{
+					SRH = SlewRate_L_Range;
+					Dyna_SRUP = 7000;
+				}
+				else
+				{
+					SRH = SlewRate_L_Range;
+					Dyna_SRUP = 7000;
+				}
+			#endif
+			
+				if(UTILITY.SHORT_CTL)
+					Dyna_LEVEL1 = (ptrMODEL_TYPE->CV)[0+(Data_tmp->VRange*3)].Min;
+				else
+				{
+					if(Data_tmp->CV.ABSELECT==B_Value)	
+						Dyna_LEVEL1 = Data_tmp->CV.STA[Data_tmp->VRange].VALUE2;
+					else
+						Dyna_LEVEL1 = Data_tmp->CV.STA[Data_tmp->VRange].VALUE1;
+				}
+				break;
+			case CP_MODE:
+				if(UTILITY.SHORT_CTL)
+					Dyna_LEVEL1 = (ptrMODEL_TYPE->CP)[0+(Data_tmp->IRange*10)].Max;
+				else
+				{
+					if(Data_tmp->CP.ABSELECT==B_Value)	
+						Dyna_LEVEL1 = Data_tmp->CP.STA[Data_tmp->IRange].VALUE2;
+					else
+						Dyna_LEVEL1 = Data_tmp->CP.STA[Data_tmp->IRange].VALUE1;
+				}	
+				SRH = CP_SR_Range;
+				Dyna_SRUP = CP_SR_CNT;
+				
+				if((Minimum_Current(CP_MODE,&Dyna_LEVEL1,&Dyna_LEVEL2)==1) && (Data_tmp->IRange == Mid_RANGE))
+					Response_Setting = CC_CR_CP_Response_1_5;				
+				break;
+		}
+		
+		if(Data_tmp->CURRMODE!=CV_MODE)
+		{
+#if 0//Min_Level_Setting>0				
+			if(Dyna_LEVEL1<Min_Level_Setting)
+				Dyna_LEVEL1 = Min_Level_Setting;
+#endif				
+		}
+		FPGA_SetValue_H = Step_To_CNT(Dyna_LEVEL1,Cal_Gain,Cal_Offset);
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+		Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1 |Response_Setting |SRH);
+		Acess_FPGA(FPGA_H_Level_Slew_Rate, Dyna_SRUP);
+#if 0		
+		if(Data_tmp->CONF.Ext_Setting.Control)	Acess_FPGA(FPGA_H_Level_Setting, 47000);
+		else									Acess_FPGA(FPGA_H_Level_Setting, FPGA_SetValue_H);
+#else
+		if(Data_tmp->CONF.Ext_Setting.Control)
+		{
+			if(Data_tmp->CONF.Ext_Setting.Control==Ext_Setting_V)	
+				FPGA_SetValue_H	= p3k_Cal_data.Ext_V_CC[Data_tmp->IRange];
+			else
+				FPGA_SetValue_H	= p3k_Cal_data.Ext_R_CC[Data_tmp->IRange];
+		}
+		
+		if(Compensation_Flag)
+			Acess_FPGA(FPGA_H_Level_Setting, New_Set_Count_To_FPGA);
+		else 
+			Acess_FPGA(FPGA_H_Level_Setting, FPGA_SetValue_H);
+#endif
+	}
+
+	if( (Data_tmp->CURRMODE==CV_MODE)||(Data_tmp->CONF.CV_Func_En==Switch_OFF)||UTILITY.SHORT_CTL )
+	{
+		Acess_FPGA(Cx_CV_H_Value, 0);
+		Acess_FPGA(Cx_CV_L_Value, 0);
+		Acess_FPGA(Cx_CV_H_Step,  0);
+		Acess_FPGA(Cx_CV_L_Step,  0);
+	}
+	else
+	{
+		if(Data_tmp->CV.STA[1].VALUE1<10)	
+			Voltage_H_Temp = 10;
+		else
+			Voltage_H_Temp = Data_tmp->CV.STA[1].VALUE1;
+
+		if(Data_tmp->CV.STA[0].VALUE1<10)	
+			Voltage_L_Temp = 10;
+		else
+			Voltage_L_Temp = Data_tmp->CV.STA[0].VALUE1;
+		
+		Acess_FPGA(Cx_CV_H_Value, Step_To_CNT(Voltage_H_Temp,p3k_Cal_data.Protection[2].CxCV_Gain,p3k_Cal_data.Protection[2].CxCV_Offset));
+		Acess_FPGA(Cx_CV_L_Value, Step_To_CNT(Voltage_L_Temp,p3k_Cal_data.Protection[0].CxCV_Gain,p3k_Cal_data.Protection[0].CxCV_Offset));
+		Acess_FPGA(Cx_CV_H_Step, Voltage_H_Temp);
+		Acess_FPGA(Cx_CV_L_Step, Voltage_L_Temp);
+	}
+#if 0
+	if(UTILITY.LOAD_CTL||UTILITY.SHORT_CTL)	 //Adam_a? 0423
+		Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense | Acquire_Cont |Set_Protection_Ref_Adjust_ON |Function_Mode |Set_Load_ON |fpga_set); 
+	else
+		Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense | Acquire_Cont |Set_Protection_Ref_Adjust_ON |Function_Mode |Set_Load_OFF|fpga_set);
+#else
+	if(UTILITY.LOAD_CTL||UTILITY.SHORT_CTL)	 //Adam_a? 0423
+		Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense | Acquire_Cont |Set_Protection_Ref_Adjust_ON |Function_Mode |Set_Load_ON ); 
+	else
+		Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense | Acquire_Cont |Set_Protection_Ref_Adjust_ON |Function_Mode |Set_Load_OFF);
+#endif
+}
+
+void MenuDecoderAddr(p3k_send_tx_list *data)
+{
+	char dyna[]		= { 0x40, 0x42, 0x50, 0x52, 0x54, 0x56, 0x24};
+	char sta[]		= { 0x10, 0x12, 0x20 , 0x24 };
+	char dynaspec[]	= { 0x60, 0x62, 0x64 };
+	char staspec[]	= { 0x30, 0x32, 0x34 };
+	char prot[]		= { 0x10, 0x04, 0x12, 0x04, 0x14, 0x16};
+	char other[]	= { 0x22, 0x20, 0x04, 0x03, 0x03, 0x03, 0x30 };
+	char mode[]		= { 0x01, 0x02, 0x03 };
+	char tmp;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+	switch(M_num)
+	{
+		case P_CC:
+			data->ADDRH = 0x01;
+			
+			if( Data_tmp->CC.STADYNA )
+				data->ADDRL = dyna[DispScrCurrLoc];
+			else						
+				data->ADDRL = sta[DispScrCurrLoc];
+			break;
+		case P_CR:
+			data->ADDRH = 0x02;
+			
+			if( Data_tmp->CR.STADYNA )	
+				data->ADDRL = dyna[DispScrCurrLoc];
+			else						
+				data->ADDRL = sta[DispScrCurrLoc];
+
+			if( DispScrCurrLoc == 2)
+				data->ADDRL = 0x24;
+			break;
+		case P_CV:
+			data->ADDRH = 0x03;
+			data->ADDRL = sta[DispCT];
+			break;
+		case P_CP:	
+			data->ADDRH = 0x04;
+			if( Data_tmp->CP.STADYNA )
+			{
+				data->ADDRL = dyna[DispScrCurrLoc];
+				if( DispScrCurrLoc == 4)
+					data->ADDRL = 0x24;
+			}
+			else
+			{
+				data->ADDRL = sta[DispScrCurrLoc];
+				if( DispScrCurrLoc == 2)
+					data->ADDRL = 0x24;
+			}
+			break;			
+		case P_CC_SPEC:
+			data->ADDRH = 0x01;
+			if( Data_tmp->CC.STADYNA )	
+				data->ADDRL = 0x60;//dynaspec[DispCT];
+			else						
+				data->ADDRL = 0x30;//staspec[DispCT];
+			break;
+		case P_CR_SPEC:
+			data->ADDRH = 0x02;
+			if( Data_tmp->CR.STADYNA )
+				data->ADDRL = 0x60;//dynaspec[DispCT];
+			else						
+				data->ADDRL = 0x30;//staspec[DispCT];
+			break;
+		case P_CV_SPEC:
+			data->ADDRH = 0x03;
+			data->ADDRL = 0x30;//staspec[DispCT];
+			break;
+		case P_CP_SPEC:
+			data->ADDRH = 0x04;
+			if( Data_tmp->CP.STADYNA )
+				data->ADDRL = 0x60;//dynaspec[DispCT];
+			else						
+				data->ADDRL = 0x30;//staspec[DispCT];
+			break;			
+		case P_CONF_PROT:
+			data->ADDRH = 0x00;
+			data->ADDRL = prot[DispScrCurrLoc];
+			break;
+		case P_CONF_OTHER:
+			data->ADDRH = 0x00;
+			data->ADDRL = other[DispScrCurrLoc];
+			break;
+		default:
+			break;
+	}
+}
+
+void EncoderTXData(void)
+{
+	switch(TX_LIST.ADDRH)
+	{
+		case Machine_Command:
+			MachineSetupFun();
+			break;
+		case 0x01:
+			CCModeSetupFun();
+			FPGA_Ctrl();		
+			break;
+		case 0x02:
+			CRModeSetupFun();
+			FPGA_Ctrl();		
+			break;
+		case 0x03:
+			CVModeSetupFun();
+			FPGA_Ctrl();		
+			break;
+		case 0x04:
+			CPModeSetupFun();
+			FPGA_Ctrl();
+			break;			
+		case 0x10:
+			SeqMemSetupFun();
+			break;
+		case 0x11:
+			SeqPFTimeSetupFun();
+			break;
+		case 0x20:
+			SavePMemFun();
+			break;
+		case 0x21:
+			SaveMemFun();
+			break;
+		case 0x30:
+			RecallPMemFun();
+			FPGA_Ctrl();
+			break;
+		case 0x31:
+			RecallMemFun();
+			FPGA_Ctrl();
+			break;
+		case 0x40:
+		case 0x41:
+		case 0x42:
+		case 0x43:
+		case 0x44:
+		case 0x45:
+		case 0x46:
+		case 0x47:
+			WriteFlashFun();		
+			break;		
+		case 0x51:
+			SaveSeqFun();
+			break;
+		case Para_Ext_Command:
+			Para_Ext_Fun();
+			break;
+		case 0x61:
+			SaveSeqFunAll();
+			break;		
+		case Cal_FPGA_Command:
+			CalibrationFun();
+			break;
+		default:
+			break;
+	}
+}
+
+void SendTXData(p3k_send_tx_list *data)
+{
+	TX_LIST = *data;
+	EncoderTXData();
+}
+
+void Alarm_Process(UBYTE Alarm_Mode,UBYTE Alarm_Action)
+{
+	if(Alarm_Action)
+		p3k_Measure_Data.Alarm = Alarm_Mode;
+	else
+	{
+		if(Alarm_Mode == p3k_Measure_Data.Alarm)
+			p3k_Measure_Data.Alarm = No_Alarm;
+	}
+}
+
+void Update_Alarm_Status(UWORD FPGA_Status_Data,long Negative_Volt_Value)
+{
+	static char RVP_Count;
+
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;	
+	p3k_send_tx_list tx_data;
+
+	/* RVP */
+	if( (Negative_Volt_Value<=(-300))&&(P_CAL_MODE!=M_num) )	
+		RVP_Count++;
+	else														
+		RVP_Count = 0;
+	
+	if((FPGA_Status_Data&Broken_Event)&&(RVP_Count==0))		
+		Alarm_Process(UnReg_Alarm, Set_Alarm);
+	else													
+		Alarm_Process(UnReg_Alarm, Clear_Alarm);
+
+	if(FPGA_Status_Data&Front_OCP_Prot)
+		Alarm_Process(FCCP_Alarm, Set_Alarm);
+	else									
+		Alarm_Process(FCCP_Alarm, Clear_Alarm);
+	
+	if(FPGA_Status_Data&Rating_OCP_Prot)	
+		Alarm_Process(ROCP_Alarm, Set_Alarm);
+	else									
+		Alarm_Process(ROCP_Alarm, Clear_Alarm);
+	
+	if(FPGA_Status_Data&CPP_Prot_Event) 	
+		Alarm_Process(CPP_Alarm, Set_Alarm);
+	else									
+		Alarm_Process(CPP_Alarm, Clear_Alarm);
+
+	if(FPGA_Status_Data&OCP_Prot_Event) 	
+		Alarm_Process(OCP_Alarm, Set_Alarm);
+	else									
+		Alarm_Process(OCP_Alarm, Clear_Alarm);
+	
+	if(FPGA_Status_Data&OPP_Prot_Event) 	
+		Alarm_Process(OPP_Alarm, Set_Alarm);
+	else									
+		Alarm_Process(OPP_Alarm, Clear_Alarm);
+
+	if(Data_tmp->CONF.Ext_Setting.Control)
+	{
+		if(Ext_UnReg_Flag && Data_tmp->CONF.Ext_Setting.Control)
+			Alarm_Process(Ext_Alarm,Set_Alarm);
+		else if(!Ext_UnReg_Flag)
+			Alarm_Process(Ext_Alarm,Clear_Alarm);
+	}
+	/* UVP Protection */
+	if( (p3k_Measure_Data.VOLT<(Data_tmp->PROT.UVP_VOLT[Data_tmp->VRange]*ptrMODEL_TYPE->PROT[6+Data_tmp->VRange].Resolution))&&(P_CAL_MODE!=M_num) )
+		Alarm_Process(UVP_Alarm,Set_Alarm);
+	else
+		Alarm_Process(UVP_Alarm,Clear_Alarm);
+	
+	/* OVP Protection */
+	if( (p3k_Measure_Data.VOLT>(Data_tmp->PROT.OVP_VOLT[Data_tmp->VRange]*ptrMODEL_TYPE->PROT[8+Data_tmp->VRange].Resolution))&&(P_CAL_MODE!=M_num) )
+		Alarm_Process(OVP_Alarm,Set_Alarm);
+	else
+		Alarm_Process(OVP_Alarm,Clear_Alarm);
+
+	if(RVP_Count>=50)
+	{
+		Alarm_Process(RVP_Alarm,Set_Alarm);
+		RVP_Count = 50;
+	}
+	else
+		Alarm_Process(RVP_Alarm,Clear_Alarm);
+	
+	/* OTP */
+	if( (FPGA_Status_Data&PS_OTP_Event)||(FPGA_Status_Data&BAIS_OTP_Event) )
+		Alarm_Process(OTP_Alarm,Set_Alarm);
+	else
+		Alarm_Process(OTP_Alarm,Clear_Alarm);
+	
+	if((M_num != P_CAL_MODE) && (M_num != P_Test_Func))
+	{
+		tx_data.ADDRH = Para_Ext_Command;
+		tx_data.ADDRL = Para_Ext_Setting;
+		SendTXData(&tx_data);
+	}	
+}
+
+void Prot_Setting_Process(void)
+{
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	UWORD All_Prot_Setteng = 0;
+	
+	if( Data_tmp->CONF.VON_LATCH)	
+		All_Prot_Setteng |= Set_Von_Latch_ON;
+	else							
+		All_Prot_Setteng |= Set_Von_Latch_OFF ;
+
+	if(Data_tmp->PROT.OPP_SET)
+		All_Prot_Setteng |= Set_OPP_Limit;
+	else
+	{
+		All_Prot_Setteng |= Set_OPP_Load_OFF;
+		Acess_FPGA(FPGA_Control, Clear_OPP_Latch);
+	}
+
+	if(Data_tmp->PROT.OCP_SET)
+		All_Prot_Setteng |= Set_OCP_Limit;
+	else
+	{
+		All_Prot_Setteng |= Set_OCP_Load_OFF;
+		Acess_FPGA(FPGA_Control, Clear_OCP_Latch);
+	}
+	
+	Acess_FPGA(FPGA_On_Off_Latch_Setting, All_Prot_Setteng);
+}
+
+void GO_NG_Determine(UBYTE GONG_MODE, UBYTE GONG_Memory)
+{
+	float GONG_Source,GONG_H_Level,GONG_L_Level;
+	double GONG_H_Resolution,GONG_L_Resolution;
+	UWORD GONG_H_Step=0,GONG_L_Step=0;
+	
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+	if(CC_MODE==GONG_MODE)
+	{
+		//GONG_Source = p3k_Measure_Data.VOLT;
+		GONG_Source = p3k_Measure_Data.Real_Volt;
+		GONG_H_Resolution = (ptrMODEL_TYPE->CC_SPEC)[1].Resolution;
+		GONG_L_Resolution = (ptrMODEL_TYPE->CC_SPEC)[2].Resolution;
+		
+		if(Data_tmp->CC.STADYNA)
+		{
+			GONG_H_Step = Data_tmp->CC.DYNA[Data_tmp->IRange].HIGHVAL;
+			GONG_L_Step = Data_tmp->CC.DYNA[Data_tmp->IRange].LOWVAL;
+		}
+		else
+		{
+			GONG_H_Step = Data_tmp->CC.STA[Data_tmp->IRange].HIGHVAL;
+			GONG_L_Step = Data_tmp->CC.STA[Data_tmp->IRange].LOWVAL;
+		}
+	}
+	else if(CR_MODE==GONG_MODE)
+	{
+		//GONG_Source = p3k_Measure_Data.VOLT;
+		GONG_Source = p3k_Measure_Data.Real_Volt;
+		GONG_H_Resolution = (ptrMODEL_TYPE->CR_SPEC)[1].Resolution;
+		GONG_L_Resolution = (ptrMODEL_TYPE->CR_SPEC)[2].Resolution;
+		
+		if(Data_tmp->CR.STADYNA)
+		{
+			GONG_H_Step = Data_tmp->CR.DYNA[Data_tmp->IRange].HIGHVAL;
+			GONG_L_Step = Data_tmp->CR.DYNA[Data_tmp->IRange].LOWVAL;
+		}
+		else
+		{
+			GONG_H_Step = Data_tmp->CR.STA[Data_tmp->IRange].HIGHVAL;
+			GONG_L_Step = Data_tmp->CR.STA[Data_tmp->IRange].LOWVAL;
+		}
+	}
+	else if(CV_MODE==GONG_MODE)
+	{
+		//GONG_Source = p3k_Measure_Data.CURR;
+		GONG_Source = p3k_Measure_Data.Real_Curr;
+		GONG_H_Resolution = (ptrMODEL_TYPE->CV_SPEC)[1].Resolution;
+		GONG_L_Resolution = (ptrMODEL_TYPE->CV_SPEC)[2].Resolution;
+		GONG_H_Step = Data_tmp->CV.STA[Data_tmp->VRange].HIGHVAL;
+		GONG_L_Step = Data_tmp->CV.STA[Data_tmp->VRange].LOWVAL;
+	}
+	else/*CP Mode*/
+	{
+		//GONG_Source = p3k_Measure_Data.VOLT;
+		GONG_Source = p3k_Measure_Data.Real_Volt;
+		GONG_H_Resolution = (ptrMODEL_TYPE->CP_SPEC)[1].Resolution;
+		GONG_L_Resolution = (ptrMODEL_TYPE->CP_SPEC)[2].Resolution;
+		
+		if(Data_tmp->CP.STADYNA)
+		{
+			GONG_H_Step = Data_tmp->CP.DYNA[Data_tmp->IRange].HIGHVAL;
+			GONG_L_Step = Data_tmp->CP.DYNA[Data_tmp->IRange].LOWVAL;
+		}
+		else
+		{
+			GONG_H_Step = Data_tmp->CP.STA[Data_tmp->IRange].HIGHVAL;
+			GONG_L_Step = Data_tmp->CP.STA[Data_tmp->IRange].LOWVAL;
+		}
+	}
+	
+	if(Prog_Load == P3k_Chan_Data.Load_Type)
+	{
+		GONG_H_Step = P3k_Chan_Data.M_DATA[GONG_Memory].HIGHVAL;
+		GONG_L_Step = P3k_Chan_Data.M_DATA[GONG_Memory].LOWVAL;
+	}
+
+	GONG_H_Level = GONG_H_Step * GONG_H_Resolution;
+	GONG_L_Level = GONG_L_Step * GONG_L_Resolution;
+	
+	if((GONG_Source <= GONG_H_Level) && (GONG_Source >= GONG_L_Level))
+		p3k_Measure_Data.Go_NoGo = 2;
+	else															
+		p3k_Measure_Data.Go_NoGo = 1;
+
+}
+
+#define Measure_Time 20
+#define Determine_Point 2
+#define First_Step 2
+void GoNoGo_Process(void)
+{
+	static UWORD Pass_Fail_Time_Count=0,Prog_Count=0;
+	UWORD GONG_Prog_No,GONG_Step_No,GONG_Delay_Time,GONG_On_Time;
+	UBYTE GONG_MODE,GONG_Memory,j;
+	UWORD *SPEC_Result_Ptr,*SPEC_Result_Backup_Ptr;
+	unsigned short Total_Determine_Point,Last_Determine_Point;
+
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	P3k_Prog_Disp_Str	*Prog_Disp_Ptr;
+	
+	if((Data_tmp->SPEC) && (UTILITY.LOAD_CTL))
+	{
+		if(Prog_Count != Prog_Seq_Data.Display_Count) /* Determine Step has be changed. */
+		{
+			Prog_Count = Prog_Seq_Data.Display_Count;
+			Pass_Fail_Time_Count = 0;
+		}
+
+		if(Prog_Load == P3k_Chan_Data.Load_Type)
+		{
+			GONG_Prog_No			= Prog_Seq_Data.Prog_Disp_Data[Prog_Count/3].Prog_No;
+			GONG_Step_No			= Prog_Seq_Data.Prog_Disp_Data[Prog_Count/3].Step_No;
+			SPEC_Result_Ptr			= &Prog_Seq_Data.Prog_Disp_Data[Prog_Count/3].SPEC_Result;
+			SPEC_Result_Backup_Ptr	= &Prog_Seq_Data.Prog_Disp_Data[Prog_Count/3].SPEC_Result_Backup;
+			GONG_On_Time 			= p3k_Chan_PROG.Timing_Data[GONG_Prog_No].ONTIME[GONG_Step_No];
+			GONG_Delay_Time			= p3k_Chan_PROG.Timing_Data[GONG_Prog_No].PFTIME[GONG_Step_No];
+			GONG_Memory				= p3k_Chan_PROG.Timing_Data[GONG_Prog_No].MEMORY[GONG_Step_No];
+			GONG_MODE				= P3k_Chan_Data.M_DATA[GONG_Memory].MODE;
+
+			Total_Determine_Point 	= (GONG_On_Time * 100) / Measure_Time;
+			Last_Determine_Point	= Total_Determine_Point - 1;
+
+			if(((!GONG_Delay_Time) && ((Pass_Fail_Time_Count > Determine_Point) && (Pass_Fail_Time_Count < Last_Determine_Point)))|| (GONG_Delay_Time && (Pass_Fail_Time_Count >= (GONG_Delay_Time*5)) && (Pass_Fail_Time_Count < Last_Determine_Point)))
+			{				
+				GO_NG_Determine(GONG_MODE, GONG_Memory);
+
+				if(Prog_Count <= First_Step)
+					Prog_Seq_Data.Prog_Disp_Data[Prog_Seq_Data.Total_Count-1].SPEC_Result_Backup = 0;
+				else
+					Prog_Seq_Data.Prog_Disp_Data[(Prog_Count/3)-1].SPEC_Result_Backup = 0;
+				
+				if(1 != *SPEC_Result_Ptr)
+					 *SPEC_Result_Ptr = p3k_Measure_Data.Go_NoGo;
+				*SPEC_Result_Backup_Ptr = p3k_Measure_Data.Go_NoGo;	
+			}
+			else
+			{	
+				Pass_Fail_Time_Count++;
+				p3k_Measure_Data.Go_NoGo = 0;
+			}
+		}
+		else
+		{
+			GONG_Delay_Time = Data_tmp->P_F_Delay;
+			GONG_MODE = Data_tmp->CURRMODE;
+
+			if(Pass_Fail_Time_Count >= (GONG_Delay_Time*5))
+				GO_NG_Determine(GONG_MODE, 0);
+			else
+			{	
+				Pass_Fail_Time_Count++;
+				p3k_Measure_Data.Go_NoGo = 0;
+			}
+		}
+	}
+	else
+	{
+		Prog_Count = 0;
+		Pass_Fail_Time_Count = 0;
+		p3k_Measure_Data.Go_NoGo = 0;
+	}
+}
+
+p3k_Ramp_Str Seq_Ramp_Process(UBYTE Ramp_Mode,UBYTE Ramp_IRange,UBYTE Ramp_VRange,UBYTE Ramp_STADYNA,UWORD Ramp_L1_STEP,UWORD Ramp_L2_STEP,P3k_Time_Str Ramp_Time)
+{
+	double SR_T1_Max = 0.0,SR_T1_Min = 0.0,SR_T1_Resolution = 0.0; /*SlewRate TimeBase1 Max/Min Value(mA/uS)*/
+	double SR_T2_Max = 0.0,SR_T2_Min = 0.0,SR_T2_Resolution = 0.0; /*SlewRate TimeBase2 Max/Min Value(mA/uS)*/
+	double SR_T3_Max = 0.0,SR_T3_Min = 0.0,SR_T3_Resolution = 0.0; /*SlewRate TimeBase3 Max/Min Value(mA/uS)*/
+	double Ramp_SR_Real = 0.0;
+	UWORD SR_Max_Step = 0,SR_Min_Step = 0,SR_Max_DA_Count = 0;
+	UWORD Ramp_STEP;
+	
+	UWORD Ramp_Time_Count = 0;
+	
+	ULONG Delta_Value_32bit = 0;
+
+	UWORD Ramp_TimeBase_Value = 0;
+
+	double Setting_Gain = 0.0,Setting_Offset = 0.0,Setting_Resolution = 0.0;
+	ULONG Ramp_mS_Time;
+	p3k_Ramp_Str p3k_Ramp_Data;
+
+	p3k_Ramp_Data.Delta_Response = Response_Select(Ramp_Mode,P3k_Chan_Data.CONF.Response);
+	
+	switch(Ramp_Mode)
+	{
+		case CC_MODE:	/* CC Mode */
+			Setting_Gain					= p3k_Cal_data.CC_Data[Ramp_IRange].Cal_Value_Gain;
+			Setting_Offset					= p3k_Cal_data.CC_Data[Ramp_IRange].Cal_Value_Offset;
+			Setting_Resolution				= ptrMODEL_TYPE->CC[(Ramp_IRange*10)+(Ramp_STADYNA*4)].Resolution;
+			SR_Max_Step 					= ptrMODEL_TYPE->CC[2+(Ramp_IRange*10)].Max;
+			SR_Min_Step 					= ptrMODEL_TYPE->CC[2+(Ramp_IRange*10)].Min;
+			SR_Max_DA_Count 				= (SR_Max_Step*20);
+			SR_T1_Resolution				= ptrMODEL_TYPE->CC[2+(Ramp_IRange*10)].Resolution;
+			break;
+		case CR_MODE: 	/* CR Mode */
+			Setting_Gain					= p3k_Cal_data.CR_Data[Ramp_IRange].Cal_Value_Gain;
+			Setting_Offset					= p3k_Cal_data.CR_Data[Ramp_IRange].Cal_Value_Offset;
+			Setting_Resolution				= ptrMODEL_TYPE->CR[(Ramp_IRange*10)+(Ramp_STADYNA*4)].Resolution;
+			SR_Max_Step 					= ptrMODEL_TYPE->CR[2+(Ramp_IRange*10)].Max;
+			SR_Min_Step 					= ptrMODEL_TYPE->CR[2+(Ramp_IRange*10)].Min;
+			SR_Max_DA_Count 				= (SR_Max_Step*20/10);
+			SR_T1_Resolution				= ptrMODEL_TYPE->CR[2+(Ramp_IRange*10)].Resolution;
+			break;
+#if 0	
+		case CV_MODE: /* CV Mode */
+			Setting_Gain					= p3k_Cal_data.CV_Data[Ramp_VRange].Cal_Value_Gain;
+			Setting_Offset					= p3k_Cal_data.CV_Data[Ramp_VRange].Cal_Value_Offset;
+			Setting_Resolution				= ptrMODEL_TYPE->CV[Ramp_VRange*3].Resolution;
+			SR_Max_Step 					= ptrMODEL_TYPE->CP[2+(Ramp_IRange*10)].Max;
+			SR_Min_Step 					= ptrMODEL_TYPE->CP[2+(Ramp_IRange*10)].Min;
+			SR_Max_DA_Count 				= (SR_Max_Step*20/10);
+			SR_T1_Resolution				= ptrMODEL_TYPE->CP[2+(Ramp_IRange*10)].Resolution;
+		break;
+#endif
+		case CP_MODE:	/* CP Mode */
+			Setting_Gain					= p3k_Cal_data.CP_Data[Ramp_IRange].Cal_Value_Gain;
+			Setting_Offset					= p3k_Cal_data.CP_Data[Ramp_IRange].Cal_Value_Offset;
+			Setting_Resolution				= ptrMODEL_TYPE->CP[(Ramp_IRange*10)+(Ramp_STADYNA*4)].Resolution;
+			SR_Max_Step 					= ptrMODEL_TYPE->CP[2+(Ramp_IRange*10)].Max;
+			SR_Min_Step 					= ptrMODEL_TYPE->CP[2+(Ramp_IRange*10)].Min;
+			SR_Max_DA_Count 				= (SR_Max_Step*20/10);
+			SR_T1_Resolution				= ptrMODEL_TYPE->CP[2+(Ramp_IRange*10)].Resolution;
+			break;
+	}
+	
+	SR_T2_Resolution = SR_T1_Resolution*10.0;
+	SR_T3_Resolution = SR_T1_Resolution*100.0;
+	Ramp_mS_Time = Ramp_Time.Hour*60*60*1000 + Ramp_Time.Minute*60*1000 + Ramp_Time.Second*1000 + Ramp_Time.MilliSecond;
+	/*
+	1uS		~ 60mS		1uS
+	60mS	~ 600mS		10uS
+	600mS	~ 6S			100uS
+	6S		~ 1min		1mS
+	1min	~ 100min		100mS
+	100min	~ 1000min	1S
+	1000min	~ 10000min	10S
+	10000min~ 1000H		1min
+	*/
+	if(Ramp_mS_Time>10000*60*1000)	/* 10000 Minute ~ 1000 Hour	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_1min;
+		Ramp_Time_Count = Ramp_Time.Hour*60 + Ramp_Time.Minute;
+	}
+	else if(Ramp_mS_Time>1000*60*1000)	/* 1000 Minute ~ 10000 Minute	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_10S;
+		Ramp_Time_Count = (Ramp_Time.Hour*60*60 + Ramp_Time.Minute*60 + Ramp_Time.Second)/10;
+	}
+	else if(Ramp_mS_Time>100*60*1000)	/* 100 Minute ~1000 Minute	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_1S;
+		Ramp_Time_Count = Ramp_Time.Hour*60*60 + Ramp_Time.Minute*60 + Ramp_Time.Second;
+	}
+	else if(Ramp_mS_Time>1*60*1000)	/* 1 Minute ~ 100 Minute	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_100mS;
+		Ramp_Time_Count = (Ramp_Time.Hour*60*60*1000 + Ramp_Time.Minute*60*1000 + Ramp_Time.Second*1000 + Ramp_Time.MilliSecond)/100;
+	}
+	else if(Ramp_mS_Time>6000)		/* 6 Second ~ 1 Minute	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_1mS;
+		Ramp_Time_Count = Ramp_Time.Minute*60*1000 + Ramp_Time.Second*1000 + Ramp_Time.MilliSecond;
+	}
+	else if(Ramp_mS_Time>600)		/* 600 mS ~ 6 Second	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_100uS;
+		Ramp_Time_Count = (Ramp_Time.Second*1000*1000 + Ramp_Time.MilliSecond*1000)/100;
+	}
+	else if(Ramp_mS_Time>60)		/* 60 mS ~ 600 mS	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_10uS;
+		Ramp_Time_Count = (Ramp_Time.MilliSecond*1000)/10;
+	}
+	else							/* 1 uS ~ 60 mS	*/
+	{
+		p3k_Ramp_Data.Delta_TimeBase = Time_Unit_1uS;
+		Ramp_Time_Count = (Ramp_Time.MilliSecond*1000)/2;
+	}
+	
+	if(Time_Unit_1uS==p3k_Ramp_Data.Delta_TimeBase)	
+		p3k_Ramp_Data.DeltaTime = 2;	/* Min TimeTick is 2uS*/
+	else											
+		p3k_Ramp_Data.DeltaTime = 1;
+	
+	if(Ramp_Time_Count)
+	{
+		if(CV_MODE != Ramp_Mode)
+			p3k_Ramp_Data.DeltaTime |= Enable_Ramp;
+	}
+
+	if(Ramp_L1_STEP>Ramp_L2_STEP)	
+		Ramp_STEP = Ramp_L1_STEP - Ramp_L2_STEP;
+	else							
+		Ramp_STEP = Ramp_L2_STEP - Ramp_L1_STEP;
+	
+	if(Ramp_mS_Time)
+	{
+		Delta_Value_32bit	= ( (float)(Step_To_CNT(Ramp_STEP,Setting_Gain,Setting_Offset))/(float)(Ramp_Time_Count) )*65536.0;
+		Ramp_SR_Real		= (Ramp_STEP*Setting_Resolution*1000.0)/(Ramp_mS_Time*1000.0);				/*	mA/uS	*/
+	}
+	else
+	{
+		Delta_Value_32bit	= 65535;
+		Ramp_SR_Real = 1.0;
+	}
+	
+	SR_T1_Max = SR_Max_Step * SR_T1_Resolution;
+	SR_T1_Min = SR_Min_Step * SR_T1_Resolution;
+	SR_T2_Max = SR_Max_Step * SR_T2_Resolution;
+	SR_T2_Min = SR_Min_Step * SR_T2_Resolution;
+	SR_T3_Max = SR_Max_Step * SR_T3_Resolution;
+	SR_T3_Min = SR_Min_Step * SR_T3_Resolution;
+	
+	if( Ramp_SR_Real>=SR_T3_Min )
+	{	
+		if(Ramp_SR_Real>SR_T3_Max)
+			Ramp_SR_Real = SR_T3_Max;
+		
+		p3k_Ramp_Data.Delta_SR_Set = Ramp_SR_Real * SR_Max_DA_Count / SR_T3_Max;
+		p3k_Ramp_Data.Delta_SR_Base = SlewRate_H_Range;
+	}
+	else if( Ramp_SR_Real>=SR_T2_Min )
+	{
+		p3k_Ramp_Data.Delta_SR_Set = Ramp_SR_Real * SR_Max_DA_Count / SR_T2_Max;
+		p3k_Ramp_Data.Delta_SR_Base  = SlewRate_M_Range;
+	}
+	else
+	{
+		if( Ramp_SR_Real<SR_T1_Min )
+			Ramp_SR_Real = SR_T1_Min;
+		
+		p3k_Ramp_Data.Delta_SR_Set = Ramp_SR_Real * SR_Max_DA_Count / SR_T1_Max;
+		p3k_Ramp_Data.Delta_SR_Base  = SlewRate_L_Range;
+	}
+
+	p3k_Ramp_Data.Delta_Value_Low	= (Delta_Value_32bit & 0x0000FFFF);
+	p3k_Ramp_Data.Delta_Value_High	= (Delta_Value_32bit & 0xFFFF0000)>>16;
+	p3k_Ramp_Data.Delta_SR_Set *= 1.2;
+	
+	if(p3k_Ramp_Data.Delta_SR_Set>SR_Max_DA_Count)
+		p3k_Ramp_Data.Delta_SR_Set = SR_Max_DA_Count;
+	
+#if 0
+	if(CV_MODE==Ramp_Mode)
+	{
+		p3k_Ramp_Data.Delta_SR_Base = SlewRate_L_Range;
+		
+		if(VRange_High==Ramp_VRange)
+			p3k_Ramp_Data.Delta_SR_Set = 600;
+		else
+		{
+			p3k_Ramp_Data.Delta_SR_Set = 6000;
+			p3k_Ramp_Data.Delta_Response |= CV_Response_L;
+		}
+	}
+	if(CP_MODE==Ramp_Mode)
+	{
+		p3k_Ramp_Data.Delta_SR_Base = CP_SR_Range;
+		p3k_Ramp_Data.Delta_SR_Set	= CP_SR_CNT;
+	}
+#else	
+	if(CP_MODE==Ramp_Mode)
+	{
+		p3k_Ramp_Data.Delta_SR_Base = CP_SR_Range;
+		p3k_Ramp_Data.Delta_SR_Set	= CP_SR_CNT;
+	}
+#endif
+
+	return p3k_Ramp_Data;
+}
+
+extern float Get_Parallel_Parameter(unsigned char IRange);
+#define Measure_Data_64     64
+char Measure_Count = 0;
+UWORD Measure_Curr_Sum=0,Measure_Volt_Sum=0,Measure_Ext_Sum=0;
+UWORD Measure_Curr_Data64[Measure_Data_64],Measure_Volt_Data64[Measure_Data_64],Measure_Ext_Data64[Measure_Data_64];
+UWORD Current_Raw[1024],Record_Count;
+float Measure_Volt_Old = 0,Measure_Curr_Old = 0,Meas_Ext_Old = 0;
+float Old_Curr_Raw[1024],Display_Curr[1024];
+
+UWORD Ext_Positive_Limit,Ext_Negative_Limit;
+long Measure_Process(void)
+{
+	UBYTE STA_DYNA_Mode;
+	int j;
+	static UWORD k=0;
+	long Measure_Curr_Sum64=0,Measure_Volt_Sum64=0,Measure_Ext_Sum64=0;
+	float Volt_Real_Gain,Curr_Real_Gain,Ext_Real_Count;
+	UWORD Volt_Positive_Limit,Curr_Positive_Limit;
+	UWORD Measure_Volt_Data,Measure_Volt_Data_AVG=0;
+	UWORD Measure_Curr_Data,Measure_Curr_Data_AVG=0;
+	UWORD Meas_Ext_Single=0,Meas_Ext_AVG=0;
+
+	long Volt_Negative_Value;
+	long Measure_Offset_Value;
+	
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	p3k_send_tx_list tx_data;
+	
+	Measure_Volt_Data = Acess_FPGA(FPGA_V_Sense,NULL);
+	Measure_Curr_Data = Acess_FPGA(FPGA_I_Sense,NULL);
+	
+	//if((Mid_RANGE == Data_tmp->IRange) && ((CP_MODE == Data_tmp->CURRMODE)))
+		//Measure_Curr_Data = Measure_Curr_Data * 10;
+
+	if( (Data_tmp->CONF.Ext_Setting.Control)&&(P_CC==M_num||P_CR==M_num||P_CV==M_num||P_CP==M_num) )
+	{
+		Meas_Ext_Single = Acess_FPGA(FPGA_EXT_RV_SENSE,NULL); 
+		DataRedrawFlag |= PARA_CHANGE;
+	}
+	
+	Volt_Real_Gain = (float)(p3k_Cal_data.Volt[Data_tmp->VRange].Meas_Value_Gain) / 65535;
+	Curr_Real_Gain = (float)(p3k_Cal_data.Curr[Data_tmp->IRange].Meas_Value_Gain) / 65535;
+
+	Volt_Positive_Limit = (65535 - p3k_Cal_data.Volt[Data_tmp->VRange].Meas_Value_Offset) * Volt_Real_Gain;
+	Curr_Positive_Limit = (65535 - p3k_Cal_data.Curr[Data_tmp->IRange].Meas_Value_Offset) * Curr_Real_Gain;
+
+#if 0
+	if((Measure_Volt_Data >= Volt_Positive_Limit) && (Measure_Volt_Data < (65535 * Volt_Real_Gain)))
+	{
+		Volt_Negative_Value =  Measure_Volt_Data - (65535 * Volt_Real_Gain);
+		Measure_Volt_Data = 0;
+	}
+#else
+	#if 0
+	if(Measure_Volt_Data > (65535 * Volt_Real_Gain))
+	{
+		Volt_Negative_Value =  Measure_Volt_Data - 65535;
+		Measure_Volt_Data = 0;
+	}
+	else
+		Volt_Negative_Value = 0;
+	#else
+	if(Measure_Volt_Data > Volt_Positive_Limit)
+	{
+		Volt_Negative_Value =  (Measure_Volt_Data - 65535)-1;
+		Measure_Volt_Data = 0;
+	}
+	else
+		Volt_Negative_Value = 0;
+
+	#endif
+	
+#endif
+
+#if 0
+	if((Measure_Curr_Data >= Curr_Positive_Limit) && (Measure_Curr_Data <= (65535 * Curr_Real_Gain)))	
+		Measure_Curr_Data = 0;
+#else
+	if(Measure_Curr_Data > (65535 * Curr_Real_Gain))
+		Measure_Curr_Data = 0;
+#endif
+
+	if(UTILITY.LOAD_CTL==Switch_OFF)
+	{
+		if(Measure_Volt_Data <= 10)		
+			Measure_Volt_Data = 0;
+		
+		if(Measure_Curr_Data <= 50)		
+			Measure_Curr_Data = 0;
+	}
+	
+	Measure_Volt_Data_AVG	= ( Measure_Volt_Data + Measure_Volt_Sum ) / 2;
+	Measure_Curr_Data_AVG	= ( Measure_Curr_Data + Measure_Curr_Sum ) / 2;
+	Meas_Ext_AVG			= ( Meas_Ext_Single	  + Measure_Ext_Sum  ) / 2;
+	Measure_Count++;
+	
+	if(Measure_Count==Measure_Data_64)
+		Measure_Count=0;
+	
+	if(Data_tmp->CURRMODE==CC_MODE)	
+		STA_DYNA_Mode = Data_tmp->CC.STADYNA;
+	else if(Data_tmp->CURRMODE==CR_MODE)	
+		STA_DYNA_Mode = Data_tmp->CR.STADYNA;
+	else if(Data_tmp->CURRMODE==CP_MODE)	
+		STA_DYNA_Mode = Data_tmp->CP.STADYNA;
+	else									
+		STA_DYNA_Mode = 0;
+
+#if 0
+	if(Measure_Volt_Data_AVG>Measure_Volt_Data)	
+		Measure_Offset_Value = Measure_Volt_Data_AVG - Measure_Volt_Data;
+	else										
+		Measure_Offset_Value = Measure_Volt_Data - Measure_Volt_Data_AVG;
+#else
+	if(Measure_Volt_Data>Measure_Volt_Sum)	
+		Measure_Offset_Value = Measure_Volt_Data - Measure_Volt_Sum;
+	else								
+		Measure_Offset_Value = Measure_Volt_Sum - Measure_Volt_Data;
+	Measure_Volt_Data_AVG = Measure_Volt_Data;
+#endif
+
+	if( ((Measure_Offset_Value>=10)&&(STA_DYNA_Mode==0)) || (Prog_Load==P3k_Chan_Data.Load_Type))
+	{
+		for(j=0;j<Measure_Data_64;j++)
+			Measure_Volt_Data64[j] = Measure_Volt_Data_AVG;
+	}
+	else
+		Measure_Volt_Data64[Measure_Count] = Measure_Volt_Data_AVG;
+
+#if 0
+	if(Measure_Curr_Data_AVG>Measure_Curr_Data) 
+		Measure_Offset_Value = Measure_Curr_Data_AVG - Measure_Curr_Data;
+	else										
+		Measure_Offset_Value = Measure_Curr_Data - Measure_Curr_Data_AVG;
+#else
+	if(Measure_Curr_Data>Measure_Curr_Sum)	
+		Measure_Offset_Value = Measure_Curr_Data - Measure_Curr_Sum;
+	else								
+		Measure_Offset_Value = Measure_Curr_Sum - Measure_Curr_Data;
+	Measure_Curr_Data_AVG = Measure_Curr_Data;
+#endif
+
+	if(((Measure_Offset_Value>=50)&&(STA_DYNA_Mode==0))||(Prog_Load==P3k_Chan_Data.Load_Type))
+	{
+		for(j=0;j<Measure_Data_64;j++)
+			Measure_Curr_Data64[j] = Measure_Curr_Data_AVG;
+	}
+	else				
+		Measure_Curr_Data64[Measure_Count] = Measure_Curr_Data_AVG;
+
+	if(Meas_Ext_Single>Measure_Ext_Sum)	
+		Measure_Offset_Value = Meas_Ext_Single - Measure_Ext_Sum;
+	else								
+		Measure_Offset_Value = Measure_Ext_Sum - Meas_Ext_Single;
+	
+	Meas_Ext_AVG = Meas_Ext_Single;
+	
+	if(Measure_Offset_Value>=50)
+	{
+		for(j=0;j<Measure_Data_64;j++)
+			Measure_Ext_Data64[j] = Meas_Ext_AVG;
+	}
+	else				
+		Measure_Ext_Data64[Measure_Count] = Meas_Ext_AVG;
+
+	for(j=0;j<Measure_Data_64;j++)
+	{
+		Measure_Volt_Sum64 += Measure_Volt_Data64[j];
+		Measure_Curr_Sum64 += Measure_Curr_Data64[j];
+		Measure_Ext_Sum64  += Measure_Ext_Data64[j];
+	}
+	
+	Measure_Volt_Sum = Measure_Volt_Sum64 >> 6;
+	Measure_Curr_Sum = Measure_Curr_Sum64 >> 6;
+	Measure_Ext_Sum	 = Measure_Ext_Sum64  >> 6;
+	p3k_Measure_Data.VOLT = (float)Measure_Volt_Sum * (ptrMODEL_TYPE->CV)[(Data_tmp->VRange)*3].Resolution;
+	p3k_Measure_Data.CURR = (float)Measure_Curr_Sum * (ptrMODEL_TYPE->CC)[(Data_tmp->IRange)*10].Resolution * Get_Parallel_Parameter(Data_tmp->IRange);
+	p3k_Measure_Data.WATT = p3k_Measure_Data.VOLT * p3k_Measure_Data.CURR;
+
+	Ext_Real_Count = (float)0.4 / 5.0 * 65535.0; /*  D/A Ref. Volt. = 5.0 */
+	Ext_Negative_Limit = 65536 + ((Ext_Real_Count * p3k_Cal_data.Ext_R_Sense.Meas_Value_Gain) / 65535) - p3k_Cal_data.Ext_R_Sense.Meas_Value_Offset;
+	Ext_Positive_Limit = (10000 * 4) * 1.1;
+
+	if((Ext_Negative_Limit > Measure_Ext_Sum) && (Ext_Positive_Limit < Measure_Ext_Sum))
+	{
+		p3k_Measure_Data.Ext_Percent = 0.0;
+		Ext_UnReg_Flag = 1;
+		UTILITY.LOAD_CTL = Switch_OFF;
+		tx_data.ADDRH = Machine_Command;
+		tx_data.ADDRL = Machine_Load_OnOff;
+		SendTXData(&tx_data);
+		PEL3000_LED_Control( LED_LOAD, UTILITY.LOAD_CTL );
+		SysRedrawFlag |= PROG_UPDATA;		
+	}
+	else			
+	{
+		Ext_UnReg_Flag = 0;
+		if(Ext_Positive_Limit < Measure_Ext_Sum)
+			p3k_Measure_Data.Ext_Percent = 0.0;
+		else
+			p3k_Measure_Data.Ext_Percent = (float)Measure_Ext_Sum / (float)(10000 * 4);
+	}
+	
+	return Volt_Negative_Value;
+}
+
+UWORD FPGA_Status_Temp;
+void MachineSetupFun(void)
+{
+	int i;
+	char tmp, range;
+	static unsigned char Load_mS,Clear_VON_Count;
+	UWORD dat,Machine_Data,TimeOut;
+	BAINT IntVal;
+	long Volt_Negative_Value;
+	UWORD FPGA_Data;
+	UWORD Voltage_H_Temp,Voltage_L_Temp;
+	UBYTE Ramp_STADYNA;
+	UWORD Ramp_STEP,LOAD_OFF_STEP,Von_Delay;
+	double Real_Value,Real_Value_Limit_Positive,Real_Value_Limit_Negative;
+
+	P3k_Time_Str	P3k_Time_Data;
+	p3k_Ramp_Str	p3k_Ramp_Data;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+
+	static BYTE next_flag = 1; //Adam_2 間隔一段時間, 第二次寫入 (debug next) 
+
+	TXData[3] = TX_LIST.ADDRL;				/* Set Addr L Value */
+
+	switch(TX_LIST.ADDRL)
+	{
+		case Machine_Meas_Query:		/* Measure Query */	
+			TXData[1]=0x2;
+			FPGA_Status_Temp			= Acess_FPGA(FPGA_Status,NULL);
+			p3k_Measure_Data.Real_Volt	= (Acess_FPGA(FPGA_V_Sense,NULL)*(ptrMODEL_TYPE->CV)[(Data_tmp->VRange)*3].Resolution);
+			p3k_Measure_Data.Real_Curr	= (Acess_FPGA(FPGA_I_Sense,NULL)*(ptrMODEL_TYPE->CC)[(Data_tmp->IRange)*10].Resolution);
+			p3k_Measure_Data.Raw_Volt	= Acess_FPGA(FPGA_V_Sense_Raw,NULL);
+			p3k_Measure_Data.Raw_Curr	= Acess_FPGA(FPGA_I_Sense_Raw,NULL);
+
+			Volt_Negative_Value = Measure_Process();
+			Update_Alarm_Status(FPGA_Status_Temp,Volt_Negative_Value);
+			
+			if((UTILITY.LOAD_CTL)&&(Data_tmp->CONF.VON_LATCH))
+			{
+				if((p3k_Measure_Data.VOLT<0.05) && (p3k_Measure_Data.CURR < 0.01))
+				{
+					if(Clear_VON_Count < 30)	
+						Clear_VON_Count++;
+					
+					if(Clear_VON_Count==25)	
+						Acess_FPGA(FPGA_Control, Clear_VON_Latch);
+				}
+				else
+					Clear_VON_Count = 0;
+			}
+			if((Prog_Load == P3k_Chan_Data.Load_Type) || (Normal_Load == P3k_Chan_Data.Load_Type))
+				GoNoGo_Process();
+		#if 1	
+			if(!Data_tmp->CONF.Ext_Setting.Control && ((M_num==P_CP)||(M_num==P_CR)))
+			{
+				if((CR_MODE==Data_tmp->CURRMODE && (!Data_tmp->CR.STADYNA)) || (CP_MODE==Data_tmp->CURRMODE && (!Data_tmp->CP.STADYNA)))
+					Compensation_Determine();
+			}
+		#endif
+		
+			if(UTILITY.LOAD_CTL)
+			{
+				if(Load_mS++ > NULL)
+				{
+					if(Load_mS > (100/Fetch_Quer_time))
+					{
+						Load_mS = 1;
+						if(++LoadON_Time[0] > 59)
+						{
+							LoadON_Time[0] = NULL;
+							if(++LoadON_Time[1] > 59)
+							{
+								LoadON_Time[1] = NULL;
+								IntVal.b[0] = LoadON_Time[3];
+								IntVal.b[1] = LoadON_Time[2];
+								if(++IntVal.i > 999)
+									LoadON_Time[0] = LoadON_Time[1] = LoadON_Time[2] = LoadON_Time[3] = IntVal.i = NULL;
+								LoadON_Time[3] = IntVal.b[0];
+								LoadON_Time[2] = IntVal.b[1];
+							}
+						}
+					}
+				}
+				else
+					LoadON_Time[0] = LoadON_Time[1] = LoadON_Time[2] = LoadON_Time[3] = NULL;
+
+				IntVal.b[0] = LoadON_Time[3]; 
+				IntVal.b[1] = LoadON_Time[2];	
+				p3k_Measure_Data.Hour = IntVal.i;
+				p3k_Measure_Data.Min = LoadON_Time[1];
+				p3k_Measure_Data.Sec = LoadON_Time[0];
+			}
+			else 
+			{
+				LoadON_Time[0] = LoadON_Time[1] = LoadON_Time[2] = LoadON_Time[3] = NULL;
+				Load_mS = NULL;	
+			}
+
+			if( (FPGA_Status_Temp&Acq4K_PTC_Done)&&(FPGA_Status_Temp&Acq4K_SWC_Done)&&p3k_Acq_4K_Measure_Data.Acq4K_Enable&&p3k_Acq_4K_Measure_Data.Acq4K_Ready )
+			{
+#if 1
+				p3k_Acq_4K_Measure_Data.CC_Resolution = (ptrMODEL_TYPE->CC)[(Data_tmp->IRange)*10].Resolution;
+				p3k_Acq_4K_Measure_Data.CV_Resolution = (ptrMODEL_TYPE->CV)[(Data_tmp->VRange)*3].Resolution;
+
+				for(i=0 ; i<4096 ; i++)
+				{
+					p3k_Acq_4K_Measure_Data.VOLT[i] = (float)Acess_FPGA(FPGA_AcqMem_V_Sense_Ext_RV_Cont_Ref,NULL);
+					p3k_Acq_4K_Measure_Data.CURR[i] = (float)Acess_FPGA(FPGA_AcqMem_I_Sense,NULL);
+					p3k_Acq_4K_Measure_Data.WATT[i] = p3k_Acq_4K_Measure_Data.VOLT[i] * p3k_Acq_4K_Measure_Data.CURR[i];
+				}
+#endif
+
+#if 1
+				for(i=0 ; i<10 ; i++)
+				{
+					PEL3000_LED_Control(LED_SHORT, Switch_ON);
+					OSTimeDly(10);
+					PEL3000_LED_Control(LED_SHORT, Switch_OFF);
+					OSTimeDly(10);
+				}
+				PEL3000_LED_Control(LED_SHORT, UTILITY.SHORT_CTL);
+#else
+				printf("Acq4K_Finish\n");
+#endif
+				Acquire_Cont &= ~Enable_Acquire_System;
+
+				if(Normal_Load==P3k_Chan_Data.Load_Type)		
+					FPGA_Ctrl();
+				else										
+					Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Sequence_Mode |Set_Load_ON);
+				
+				p3k_Acq_4K_Measure_Data.Acq4K_Enable= 0;
+				p3k_Acq_4K_Measure_Data.Acq4K_Ready	= 0;
+				
+				if(P_CONF_OTHER==M_num)
+					DataRedrawFlag |= PARA_CHANGE;
+			}
+			break;
+		case Machine_Init_Query:		/* Init Query */
+			FPGA_Data = Acess_FPGA(FPGA_Machine_Status, NULL);
+			PEL3000_FPGA_Date = (FPGA_Data&0xFFF0)>> 4;
+			Data_tmp->INFO.MACHTYPE = (UBYTE)(FPGA_Data&0x000F);
+			TXData[1] = 0x04;
+			break;	
+		case Machine_Input_Trigger:		/* Load On Time */
+			Acess_FPGA(FPGA_Control, Acquire_Trigger_Pulse);
+			break;	
+		case Machine_Seq_ID:	/* Machine Status */
+			FPGA_Data = Acess_FPGA(FPGA_Sequence_Mode_Set_ID,NULL);
+			
+			if((FPGA_Data&Wait_For_Trig)&&(!Prog_Seq_Data.MANUAL_CTRL))
+			{
+				Prog_Seq_Data.MANUAL_CTRL = 1;
+				MenuRedrawFlag |= MENU_CHANGE;
+			} 
+			else if(!(FPGA_Data & Wait_For_Trig)) //Adam_3 (debug: trigger next) // 0927
+			{
+				Prog_Seq_Data.MANUAL_CTRL = 0;
+				MenuRedrawFlag |= MENU_CHANGE;
+			}
+			
+			if((FPGA_Data&0xF000)==Run_Status_CX_Mode)
+			{
+				Prog_Seq_Data.SEQ_Complete = 1;
+				break;
+			}
+			
+			FPGA_Data &= Show_Now_Run_Point;
+			Prog_Seq_Data.Display_Count = FPGA_Data;
+
+			if (Prog_Seq_Data.MANUAL_CTRL)	//Adam_2 間隔一段時間, 第二次寫入 (debug next) 
+			{  
+				if (next_flag ==0)
+					MenuRedrawFlag |= MENU2_CHANGE;
+				else 
+					next_flag--;	
+			} 
+			else
+				next_flag = 10;
+			
+			for(i=0 ; i<16 ; i++)
+				Prog_Seq_Data.FPGA_Loop_Count[i] = Acess_FPGA(FPGA_Read_JP_Counter,NULL);
+			break;
+		case Machine_Prot_Status:	/* Protection Status */
+			Prot_Setting_Process();
+			break;
+		case 0x05:	/* Alarm Clear */
+
+			break;
+		case 0x06:	/* Chan Mode */
+			FPGA_Ctrl();
+			break;
+		case Machine_Pause_Prog:	/* Chan ID */
+			if(Prog_Seq_Data.SEQ_Stop_Continue)	
+				Acess_FPGA(FPGA_On_Off_Reference_Setting, Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Sequence_Mode |Set_Load_ON|Set_Wait_ON);
+			else								
+				Acess_FPGA(FPGA_On_Off_Reference_Setting, Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Sequence_Mode |Set_Load_ON);
+			break;
+		case 0x08:	/* Run Program Status */
+			
+			break;
+		case 0x09:	/* Active Channel */
+
+			break;
+		case 0x0a:	/* Short Channel */
+			FPGA_Ctrl();		// 2010_05
+			break;
+		case Machine_Load_OnOff:	/* Load On & Off */
+			if( Normal_Load==P3k_Chan_Data.Load_Type )
+			{
+				if( (p3k_Measure_Data.Alarm)&&(UTILITY.LOAD_CTL) )
+				{
+				}
+				else
+					FPGA_Ctrl();
+			}
+			else
+			{
+				if(UTILITY.LOAD_CTL)
+				{
+#if 1
+					Acess_FPGA(FPGA_H_Circuit_Switch_Control_0,	Prog_Seq_Data.FPGA_Seq_Data[1024].CS0_Setting);
+					Acess_FPGA(FPGA_H_Circuit_Switch_Control_1,	Prog_Seq_Data.FPGA_Seq_Data[1024].CS1_Setting);
+					Acess_FPGA(FPGA_H_Level_Slew_Rate,			Prog_Seq_Data.FPGA_Seq_Data[1024].SR_Setting);
+					Acess_FPGA(FPGA_H_Level_Setting,			Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Setting);
+
+					if(P3k_Chan_Data.Load_Type!=Prog_Load)
+					{
+						P3k_Chan_Data.CURRMODE	= Prog_Seq_Data.FPGA_Seq_Data[1024].SEQ_Mode;
+						P3k_Chan_Data.VRange	= Prog_Seq_Data.FPGA_Seq_Data[1024].SEQ_Range/3;
+						P3k_Chan_Data.IRange	= Prog_Seq_Data.FPGA_Seq_Data[1024].SEQ_Range%3;
+						switch(P3k_Chan_Data.CURRMODE)
+						{
+							default:/*CC_MODE:*/
+								Debug_printf("Machine_Load_OnOff\n");
+							case CC_MODE:
+								P3k_Chan_Data.CC.ABSELECT	= A_Value;
+								P3k_Chan_Data.CC.STADYNA	= Function_Static;
+								P3k_Chan_Data.CC.STA[P3k_Chan_Data.IRange].VALUE1 = Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step;
+								break;
+							case CR_MODE:
+								P3k_Chan_Data.CR.ABSELECT	= A_Value;
+								P3k_Chan_Data.CR.STADYNA	= Function_Static;
+								P3k_Chan_Data.CR.STA[P3k_Chan_Data.IRange].VALUE1 = Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step;
+								break;
+							case CV_MODE:
+								P3k_Chan_Data.CV.ABSELECT	= A_Value;
+								P3k_Chan_Data.CV.STADYNA	= Function_Static;
+								P3k_Chan_Data.CV.STA[P3k_Chan_Data.VRange].VALUE1 = Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step;
+								break;
+							case CP_MODE:
+								P3k_Chan_Data.CP.ABSELECT	= A_Value;
+								P3k_Chan_Data.CP.STADYNA	= Function_Static;
+								P3k_Chan_Data.CP.STA[P3k_Chan_Data.IRange].VALUE1 = Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step;
+								break;
+						}
+						RestoreRealChan();
+					}
+#endif
+					Acess_FPGA(FPGA_On_Off_Reference_Setting, Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Sequence_Mode |Set_Load_ON);
+				}
+				else
+					Acess_FPGA(FPGA_On_Off_Reference_Setting, Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Sequence_Mode |Set_Load_OFF);
+			}
+			break;
+		case 0x0c:	/* Remote / Local Control */
+			tmp = 0x00;
+			if(REM_CONT)						
+				tmp |= 0x01;		/* Bit 0 */
+			
+			if(UTILITY.BEEP_ONOFF)			
+				tmp |= 0x02;		/* Bit 1 */
+			
+			if(UTILITY.Rotate_Knob)			
+				tmp |= 0x08;		/* Bit 3 */
+			break;
+		case 0x0d:
+			TXData[4] = ChanNo+1;
+			break;
+		case 0x0e:
+			TXData[5] = Disp_Select;
+			break;
+		case 0x0f:
+			TXData[5] = Disp_Mode;
+			break;
+		case Machine_OCP_Level:	/* OCP Level */
+			Machine_Data = Data_tmp->PROT.OCP[IRange_High];
+			p3k_Cal_data.Protection[IRange_High].OCP = Step_To_CNT(Machine_Data,p3k_Cal_data.Protection[IRange_High].OCP_Gain,p3k_Cal_data.Protection[IRange_High].OCP_Offset);
+
+			if( Data_tmp->PROT.OCP[IRange_High]>(ptrMODEL_TYPE->PROT[2].Max/10) )
+				Machine_Data = (ptrMODEL_TYPE->PROT[2].Max/10);
+			else
+				Machine_Data = Data_tmp->PROT.OCP[IRange_High];
+			p3k_Cal_data.Protection[Mid_RANGE].OCP = Step_To_CNT(Machine_Data,p3k_Cal_data.Protection[IRange_High].OCP_Gain,p3k_Cal_data.Protection[IRange_High].OCP_Offset);
+			
+			if( Data_tmp->PROT.OCP[IRange_High]>(ptrMODEL_TYPE->PROT[2].Max/100) )
+				Machine_Data = ptrMODEL_TYPE->PROT[2].Max;
+			else
+				Machine_Data = Data_tmp->PROT.OCP[IRange_High]*100;
+			p3k_Cal_data.Protection[LOW_RANGE].OCP = Step_To_CNT(Machine_Data,p3k_Cal_data.Protection[IRange_Low].OCP_Gain,p3k_Cal_data.Protection[IRange_Low].OCP_Offset);
+
+			Check_Max_Prot();
+
+			Acess_FPGA(FPGA_CX_H_OCP, p3k_Cal_data.Protection[IRange_High].OCP);
+			Acess_FPGA(FPGA_CX_M_OCP, p3k_Cal_data.Protection[IRange_Mid].OCP);
+			Acess_FPGA(FPGA_CX_L_OCP, p3k_Cal_data.Protection[IRange_Low].OCP);
+			FPGA_Ctrl();
+			break;
+		case Machine_OPP_Level:	/* OPP Level */
+			Machine_Data = Data_tmp->PROT.OPP[IRange_High];			                              
+			p3k_Cal_data.Protection[IRange_High].OPP = Step_To_CNT(Machine_Data,p3k_Cal_data.Protection[IRange_High].OPP_Gain,p3k_Cal_data.Protection[IRange_High].OPP_Offset);
+			p3k_Cal_data.Protection[Mid_RANGE].OPP = p3k_Cal_data.Protection[HIGH_RANGE].OPP;
+
+			if( Data_tmp->PROT.OPP[HIGH_RANGE]>(ptrMODEL_TYPE->PROT[5].Max*0.3) )
+				Machine_Data = ptrMODEL_TYPE->PROT[5].Max*0.3;
+			else
+				Machine_Data = Data_tmp->PROT.OPP[HIGH_RANGE];
+			p3k_Cal_data.Protection[IRange_Low].OPP = Step_To_CNT(Machine_Data,p3k_Cal_data.Protection[IRange_Low].OPP_Gain,p3k_Cal_data.Protection[IRange_Low].OPP_Offset);
+			Check_Max_Prot();
+
+			Acess_FPGA(FPGA_CX_H_OPP, p3k_Cal_data.Protection[IRange_High].OPP);
+			Acess_FPGA(FPGA_CX_M_OPP, p3k_Cal_data.Protection[IRange_High].OPP);
+			Acess_FPGA(FPGA_CX_L_OPP, p3k_Cal_data.Protection[IRange_Low].OPP);
+			FPGA_Ctrl();
+			break;			
+		case 0x18:				/* Init Query */
+			TXData[1]=0x04;
+			break;
+		case Machine_Test_Query:		/* Test Query */
+			p3k_Measure_Data.Real_Volt	= ( Acess_FPGA(FPGA_V_Sense,NULL)*(ptrMODEL_TYPE->CV)[(Data_tmp->VRange)*3].Resolution);
+			p3k_Measure_Data.Real_Curr	= ( Acess_FPGA(FPGA_I_Sense,NULL)*(ptrMODEL_TYPE->CC)[(Data_tmp->IRange)*10].Resolution);
+			p3k_Measure_Data.Raw_Volt	= Acess_FPGA(FPGA_V_Sense_Raw,NULL);
+			p3k_Measure_Data.Raw_Curr	= Acess_FPGA(FPGA_I_Sense_Raw,NULL);
+			break;
+		case Machine_Von_Delay:
+			if(Data_tmp->CONF.D_Von_Delay <= 900)
+				 Von_Delay = 0;
+			else
+				 Von_Delay = Data_tmp->CONF.D_Von_Delay;
+
+			Acess_FPGA(FPGA_Von_Delay, Von_Delay);
+			break;
+		case Machine_Von_Voltage:	/* Von Voltage */	
+			if(Data_tmp->CONF.VON_VOLT[1] < 30)	
+				Voltage_H_Temp = 30;
+			else								
+				Voltage_H_Temp = Data_tmp->CONF.VON_VOLT[1];
+			
+			if(Data_tmp->CONF.VON_VOLT[0] < 50)	
+				Voltage_L_Temp = 50;
+			else								
+				Voltage_L_Temp = Data_tmp->CONF.VON_VOLT[0];
+			
+			Acess_FPGA(FPGA_VON_H, Voltage_H_Temp);
+			Acess_FPGA(FPGA_VON_L, Voltage_L_Temp); 
+			//FPGA_Ctrl();
+			break;		
+		case Machine_Soft_Start:    /* Soft Start */
+			P3k_Time_Data.Hour			= 0;
+			P3k_Time_Data.Minute		= 0;
+			P3k_Time_Data.Second		= 0;
+			P3k_Time_Data.MilliSecond	= Data_tmp->CONF.SOFT_START;
+
+			switch(Data_tmp->CURRMODE)
+			{
+				case CC_MODE: /* CC Mode */
+					Ramp_STADYNA = Data_tmp->CC.ABSELECT;
+					if(Data_tmp->CC.STADYNA)	
+						Ramp_STEP = Data_tmp->CC.DYNA[Data_tmp->IRange].LEVEL1;
+					else
+					{
+						if(Data_tmp->CC.ABSELECT)	
+							Ramp_STEP = Data_tmp->CC.STA[Data_tmp->IRange].VALUE2;
+						else						
+							Ramp_STEP = Data_tmp->CC.STA[Data_tmp->IRange].VALUE1;
+					}
+					if(Data_tmp->IRange == Mid_RANGE)
+						LOAD_OFF_STEP = Min_Startup_Setting_M;
+					else
+						LOAD_OFF_STEP = Min_Startup_Setting_H_L;
+					break;
+				case CR_MODE:	
+					Ramp_STADYNA = Data_tmp->CR.ABSELECT;
+					if(Data_tmp->CR.STADYNA)
+						Ramp_STEP = Data_tmp->CR.DYNA[Data_tmp->IRange].LEVEL1;
+					else
+					{
+						if(Data_tmp->CR.ABSELECT)	
+							Ramp_STEP = Data_tmp->CR.STA[Data_tmp->IRange].VALUE2;
+						else						
+							Ramp_STEP = Data_tmp->CR.STA[Data_tmp->IRange].VALUE1;
+					}
+					if(Data_tmp->IRange == Mid_RANGE)
+						LOAD_OFF_STEP = Min_Startup_Setting_M;
+					else
+						LOAD_OFF_STEP = Min_Startup_Setting_H_L;
+					break;
+#if 0	
+				case CV_MODE:		/* CV Mode */				
+					Ramp_STADYNA = Data_tmp->CV.ABSELECT;	
+					
+					if(Data_tmp->CV.ABSELECT)	
+						Ramp_STEP = Data_tmp->CV.STA[Data_tmp->VRange].VALUE2;
+					else						
+						Ramp_STEP = Data_tmp->CV.STA[Data_tmp->VRange].VALUE1;
+					LOAD_OFF_STEP = (ptrMODEL_TYPE->CV)[3].Def*1.1;
+					break;
+#endif
+				case CP_MODE:		/* CP Mode */
+					Ramp_STADYNA = Data_tmp->CP.ABSELECT;
+					
+					if(Data_tmp->CP.STADYNA)
+						Ramp_STEP = Data_tmp->CP.DYNA[Data_tmp->IRange].LEVEL1;
+					else
+					{
+						if(Data_tmp->CP.ABSELECT)
+							Ramp_STEP = Data_tmp->CP.STA[Data_tmp->IRange].VALUE2;
+						else						
+							Ramp_STEP = Data_tmp->CP.STA[Data_tmp->IRange].VALUE1;
+					}
+					if(Data_tmp->IRange == Mid_RANGE)
+						LOAD_OFF_STEP = Min_Startup_Setting_M;
+					else
+						LOAD_OFF_STEP = Min_Startup_Setting_H_L;
+
+					break;
+			}
+			
+			if(Data_tmp->CONF.Ext_Setting.Control)
+			{
+				if(Data_tmp->CONF.Ext_Setting.Control==Ext_Setting_V)	
+					Ramp_STEP = p3k_Cal_data.Ext_V_CC[Data_tmp->IRange];
+				else
+					Ramp_STEP = p3k_Cal_data.Ext_R_CC[Data_tmp->IRange];
+			}
+
+			p3k_Ramp_Data = Seq_Ramp_Process(Data_tmp->CURRMODE, Data_tmp->IRange, Data_tmp->VRange, Ramp_STADYNA, LOAD_OFF_STEP, Ramp_STEP, P3k_Time_Data);
+			Acess_FPGA(FPGA_Soft_Start_Circuit_Switch_1,p3k_Ramp_Data.Delta_TimeBase|p3k_Ramp_Data.Delta_Response|p3k_Ramp_Data.Delta_SR_Base);
+			Acess_FPGA(FPGA_Soft_Start_Delta_T,			p3k_Ramp_Data.DeltaTime);
+			Acess_FPGA(FPGA_Soft_Start_Delta_VL,		p3k_Ramp_Data.Delta_Value_Low);
+			Acess_FPGA(FPGA_Soft_Start_Delta_VH,		p3k_Ramp_Data.Delta_Value_High);
+			Acess_FPGA(FPGA_Soft_Start_Slew_Rate,		p3k_Ramp_Data.Delta_SR_Set);
+			FPGA_Ctrl();
+			break;
+		case 0x30:	/* Load Sync Delay Time */
+			//TXData[4] = Data_tmp->UTILITY.LOADTIME;
+			break;
+		case 0x32:	/* GO / NG Delay Time */
+			TXData[4] = Data_tmp->P_F_Delay;
+			break;
+		case 0x34:	/* Test */
+			break;			
+		case 0x40:	/* Write Serial Number of Slave*/
+			break;
+		case 0x50:	/* Read Serial Number of Slave*/
+			break;
+		case 0x60:	/* Common <---> Upgrading*/
+			break;
+		case '\x90':	/* Common <---> Upgrading*/ 
+			break;
+		case '\xA0':		/* Acquirement Rate Setting */ /*Machine_Enable_Acq4K*/
+		case Machine_Enable_Acq4K:				
+			if(p3k_Acq_4K_Measure_Data.Acq4K_Enable)
+			{
+				Acquire_Cont &= ~Enable_Acquire_System;
+				FPGA_Ctrl();
+				Acquire_Cont &= ~Enable_Acquire_Sequence;
+				Acquire_Cont |= Enable_Acquire_System;
+				Acess_FPGA(FPGA_Acquire_System_Sampling_Rate, 		p3k_Acq_4K_Measure_Data.Acq4K_Interval);
+				Acess_FPGA(FPGA_Acquire_System_Pre_Trigger_Counter, p3k_Acq_4K_Measure_Data.Acq4K_PTC);
+				Acess_FPGA(FPGA_Acquire_System_Sweep_Counter, 		p3k_Acq_4K_Measure_Data.Acq4K_SWC);
+			}
+			else
+			{
+				Acquire_Cont &= ~Enable_Acquire_System;
+				p3k_Acq_4K_Measure_Data.Acq4K_Ready = 0;
+			}
+			FPGA_Ctrl();
+			/*Wait Acquire PTC*/
+			if(p3k_Acq_4K_Measure_Data.Acq4K_Enable)
+			{
+				//Debug_printf("Wait Acq4K PTC\n");
+				TimeOut = 500;
+				while(1)
+				{
+					OSTimeDly(1);
+					TimeOut--;
+					if( (TimeOut==0)||(Acess_FPGA(FPGA_Status,NULL)&Acq4K_PTC_Done) )
+						break;
+				}
+				if(TimeOut)
+					Debug_printf("Acq4K PTC Finish\n");
+				else
+				{
+					Debug_printf("Acq4K PTC Error\n");				
+					Menu_Message(" Acq4K PTC Error!! ",50,210);
+					CtrlFlag1 |= Disp_Middle_Message;
+					DMA_Update_Flag = 1;
+					Update_Panel();
+					OSTimeDly(200);
+				}
+				p3k_Acq_4K_Measure_Data.Acq4K_Ready = 1;
+				Acquire_Cont |= Enable_Acquire_Sequence;
+			}
+			break;
+		case '\xD0':
+		case Machine_Setting_IMON:
+			Acess_FPGA(FPGA_Rear_IMON_Output_Adjust,p3k_Cal_data.Rear_IMON[P3k_Chan_Data.IRange]);
+			Acess_FPGA(FPGA_Front_IMON_Output_Adjust,p3k_Cal_data.Front_IMON[P3k_Chan_Data.IRange]);
+			break;
+		default:
+			break;
+	}
+}
+
+void CCModeSetupFun(void)
+{
+	UWORD dat;
+	char tmp;
+	int cnt;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	
+	tmp = Data_tmp->IRange;
+	switch(TX_LIST.ADDRL)
+	{
+		case 0x00:
+			tmp = 0x00;
+			if( Data_tmp->IRange)
+				tmp |= 0x01;
+			if( Data_tmp->CC.STADYNA)
+				tmp |= 0x02;
+			if( Data_tmp->CC.ABSELECT)	/* A_B SELECT */
+				tmp |= 0x10;
+			if( Data_tmp->VRange)		/* Vrange */
+				tmp |= 0x40;
+			break;
+		case 0x01:
+			if(UTILITY.LOAD_CTL)
+				Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);
+		case 0x10:											/* A Value */
+			dat = Data_tmp->CC.STA[tmp].VALUE1;		
+			break;
+		case 0x12:											/* B Value */
+			dat = Data_tmp->CC.STA[tmp].VALUE2;
+			break;
+		case 0x20:											/* SlewRate Up */
+			dat = Data_tmp->CC.STA[tmp].SLEWRATEUP;
+			break;
+		case 0x22:											/* SlewRate Down */
+			dat = Data_tmp->CC.STA[tmp].SLEWRATEDN;
+			break;
+		case 0x24:
+			FPGA_Ctrl();
+		case 0x30:											/* Spec Center Value */
+			TXData[3]=0x30;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;
+			dat = Data_tmp->CC.STA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CC.STA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;
+		case 0x40:
+			dat = Data_tmp->CC.DYNA[tmp].LEVEL1;
+			break;
+		case 0x42:
+			dat = Data_tmp->CC.DYNA[tmp].LEVEL2;
+			break;
+		case 0x50:
+			dat = Data_tmp->CC.DYNA[tmp].SLEWRATEUP;
+			break;
+		case 0x52:
+			dat = Data_tmp->CC.DYNA[tmp].SLEWRATEDN;
+			break;
+		case 0x54:
+			dat = Data_tmp->CC.DYNA[tmp].TIME1;
+			if(Data_tmp->CC.DYNA[tmp].T1_RANGE)
+				dat|=0x8000;
+			break;
+		case 0x56:
+			dat = Data_tmp->CC.DYNA[tmp].TIME2;
+			if(Data_tmp->CC.DYNA[tmp].T2_RANGE)
+				dat|=0x8000;
+			break;
+		case 0x60:
+			TXData[3]=0x60;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;			
+			dat = Data_tmp->CC.DYNA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CC.DYNA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;
+		default:
+			break;
+	}
+}
+
+void CRModeSetupFun(void)
+{
+	UWORD dat;
+	char tmp;
+	int cnt;
+	P3k_Data_Str		*Data_tmp = &P3k_Chan_Data;
+	
+	tmp = Data_tmp->IRange;
+	switch(TX_LIST.ADDRL)
+	{
+		case 0x00:
+			TXData[3] = TX_LIST.ADDRL;
+			tmp = 0x00;
+			if( Data_tmp->IRange)		tmp |= 0x01;
+			if( Data_tmp->CR.STADYNA)	tmp |= 0x02;
+			if( Data_tmp->CR.ABSELECT)	tmp |= 0x10;	/* A_B SELECT */
+			if( Data_tmp->VRange)		tmp |= 0x40;	/* Vrange */
+			TXData[4] = tmp;
+			break;
+		case 0x01:
+			if(UTILITY.LOAD_CTL)
+				Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);
+		case 0x10:											/* A Value */
+			dat = Data_tmp->CR.STA[tmp].VALUE1;
+			break;
+		case 0x12:											/* B Value */
+			dat = Data_tmp->CR.STA[tmp].VALUE2;
+			break;
+		case 0x20:											/* SlewRate Up */
+			dat = Data_tmp->CR.STA[tmp].SLEWRATEUP;
+			break;
+		case 0x22:											/* SlewRate Down */
+			dat = Data_tmp->CR.STA[tmp].SLEWRATEDN;
+			break;
+		case 0x24:
+			FPGA_Ctrl();
+		case 0x30:
+			TXData[3]=0x30;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;
+			dat = Data_tmp->CR.STA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CR.STA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;
+		case 0x40:
+			dat = Data_tmp->CR.DYNA[tmp].LEVEL1;
+			break;
+		case 0x42:
+			dat = Data_tmp->CR.DYNA[tmp].LEVEL2;
+			break;
+		case 0x50:
+			dat = Data_tmp->CR.DYNA[tmp].SLEWRATEUP;
+			break;
+		case 0x52:
+			dat = Data_tmp->CR.DYNA[tmp].SLEWRATEDN;
+			break;
+		case 0x54:
+			dat = Data_tmp->CR.DYNA[tmp].TIME1;
+			if(Data_tmp->CR.DYNA[Data_tmp->IRange].T1_RANGE)
+				dat|=0x8000;
+			break;
+		case 0x56:
+			dat = Data_tmp->CR.DYNA[tmp].TIME2;
+			if(Data_tmp->CR.DYNA[Data_tmp->IRange].T2_RANGE)
+				dat|=0x8000;
+			break;
+		case 0x60:
+			TXData[3]=0x60;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;
+			dat = Data_tmp->CR.DYNA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CR.DYNA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;
+		default:
+			break;
+	}
+}
+
+void CVModeSetupFun(void)
+{
+	UWORD dat;
+	char tmp;
+	int cnt;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	
+	tmp = Data_tmp->IRange;
+	switch(TX_LIST.ADDRL)
+	{
+		case 0x00:
+			TXData[3] = TX_LIST.ADDRL;
+			tmp = 0x00;
+			if( Data_tmp->IRange)
+				tmp |= 0x01;
+			if( Data_tmp->CV.ABSELECT)	/* A_B SELECT */
+				tmp |= 0x10;			
+			if( Data_tmp->CV.RESPONSE)
+				tmp |= 0x20;
+			if( Data_tmp->VRange)	/* Vrange */
+				tmp |= 0x40;
+			TXData[4] = tmp;	
+			break;
+		case 0x01:
+			if(UTILITY.LOAD_CTL)
+				Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);			
+		case 0x10:											/* A Value */
+			dat = Data_tmp->CV.STA[tmp].VALUE1;
+			break;
+		case 0x12:											/* B Value */
+			dat = Data_tmp->CV.STA[tmp].VALUE2;
+			break;
+		case 0x14:
+			dat = Data_tmp->CV.STA[tmp].CURRENTLIMIT;		
+			break;
+		case 0x30:
+			TXData[3]=0x30;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;
+			dat = Data_tmp->CV.STA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CV.STA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;			
+		default:
+			break;
+	}	
+}
+
+void CPModeSetupFun(void)
+{
+	UWORD dat;
+	char tmp;
+	int cnt;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	
+	tmp = Data_tmp->IRange;
+	switch(TX_LIST.ADDRL)
+	{
+		case 0x00:
+			TXData[3] = TX_LIST.ADDRL;
+			tmp = 0x00;
+			if( Data_tmp->IRange)
+				tmp |= 0x01;
+			if( Data_tmp->CP.STADYNA)
+				tmp |= 0x02;
+			if( Data_tmp->CP.ABSELECT)	/* A_B SELECT */
+				tmp |= 0x10;
+			if( Data_tmp->VRange)	/* Vrange */
+				tmp |= 0x40;		
+			break;
+		case 0x01:
+			if(UTILITY.LOAD_CTL)
+				Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);			
+		case 0x10:											/* A Value */
+			dat = Data_tmp->CP.STA[tmp].VALUE1;		
+			break;
+		case 0x12:											/* B Value */
+			dat = Data_tmp->CP.STA[tmp].VALUE2;
+			break;
+		case 0x24:
+				FPGA_Ctrl();
+		case 0x30:											/* Spec Center Value */
+			TXData[3]=0x30;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;
+			dat = Data_tmp->CP.STA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CP.STA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;
+		case 0x40:
+			dat = Data_tmp->CP.DYNA[tmp].LEVEL1;
+			break;
+		case 0x42:
+			dat = Data_tmp->CP.DYNA[tmp].LEVEL2;
+			break;
+		case 0x54:
+			dat = Data_tmp->CP.DYNA[tmp].TIME1;
+			if(Data_tmp->CP.DYNA[tmp].T1_RANGE)
+				dat|=0x8000;
+			break;
+		case 0x56:
+			dat = Data_tmp->CP.DYNA[tmp].TIME2;
+			if(Data_tmp->CP.DYNA[tmp].T2_RANGE)
+				dat|=0x8000;
+			break;
+		case 0x60:
+			TXData[3]=0x60;
+			if(tmp)
+				TXData[3] = TXData[3] | 0x80;			
+			dat = Data_tmp->CP.DYNA[tmp].HIGHVAL;
+			TXData[4] = (dat & 0xff00) >> 8;
+			TXData[5] = dat & 0x00ff;
+			dat = Data_tmp->CP.DYNA[tmp].LOWVAL;
+			TXData[6] = (dat & 0xff00) >> 8;
+			TXData[7] = dat & 0x00ff;
+			break;
+		default:
+			break;
+	}
+}
+
+void SeqMemSetupFun(void)		/* Soft Test is OK!*/
+{
+}
+
+char GetMemIndexCT(char no)
+{
+	int i;
+	char tmp=0;
+
+	for( i=0; i<=15 ; i++)
+	{
+		/* Get chain list of run program */
+		if(p3k_Disp_PROG.Timing_Data[no].RUNMODE[i] == 0)
+		{
+		}
+		else
+		{
+			DGIO_BAR.PROGNO[DGIO_BAR.TOTAL_CT]	= no;
+			DGIO_BAR.SEQNO[DGIO_BAR.TOTAL_CT]	= i;
+			DGIO_BAR.RUNMODE[DGIO_BAR.TOTAL_CT]= p3k_Disp_PROG.Timing_Data[no].RUNMODE[i];
+			DGIO_BAR.MEMNO[DGIO_BAR.TOTAL_CT]	= p3k_Disp_PROG.Timing_Data[no].MEMORY[i];
+			DGIO_BAR.PFTIME[DGIO_BAR.TOTAL_CT]	= p3k_Disp_PROG.Timing_Data[no].PFTIME[i];
+			DGIO_BAR.TOTAL_CT++;
+			tmp++;
+		}
+	}
+	return(tmp);
+}
+
+void SeqPFTimeSetupFun(void)
+{
+	UWORD dat;
+	int i;
+	char ptr_addr[12]={0x00,0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x90,0xa0,0xb0 };
+
+	if(TX_LIST.ADDRL)
+	{
+		TXData[1] = 24;
+		TXData[3] = ptr_addr[p3k_Disp_PROG.Prog_No];
+#if 0
+		for( i=0 ; i<=9 ; i++){
+			dat = D_RUNPROG.PROG[D_RUNPROG.PROGNO].PFTIME[i] * 20;		/* PF time value * 20 */
+			TXData[2*i+4] = (dat & 0xff00) >> 8;
+			TXData[2*i+5] = dat & 0x00ff;
+			}		
+#else		
+		for( i=0 ; i<=9 ; i++)
+		{
+			dat = DGIO_BAR.PFTIME[(10*p3k_Disp_PROG.Prog_No)+i] * 20;		/* PF time value * 20 */
+			TXData[2*i+4] = (dat & 0xff00) >> 8;
+			TXData[2*i+5] = dat & 0x00ff;
+		}		
+#endif		
+	}
+}
+
+void SavePMemFun(void)
+{
+}
+
+void RecallPMemFun(void)
+{
+	char no;
+	
+	no = TX_LIST.ADDRL >> 4;
+	no = no & 0x0f;
+
+	TXData[2] = TX_LIST.ADDRH;
+	TXData[3] = TX_LIST.ADDRL;
+}
+
+void SaveMemFun(void)
+{
+	char addr_h[]={ 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c };
+	char no,val_h,val_l,*dest;
+	UWORD *sour;
+	int i;
+	unsigned char *scale;
+	unsigned char sr_scale1=16;
+
+	no = p3k_File_Utility_BAR.MEMORY_ADDR;
+	
+	val_h = no/10;
+	val_l = no - (val_h*10);
+
+	TX_LIST.ADDRH = addr_h[val_h];
+	TX_LIST.ADDRL = val_l << 4;
+
+	TXData[1] = 24;		/* Length = 0x18*/
+	TXData[2] = TX_LIST.ADDRH;
+	TXData[3] = TX_LIST.ADDRL;
+
+	TXData[4] = ChanID[TX_LIST.CHANNO].M_DATA[no].MODE;
+	TXData[5] = (ChanID[TX_LIST.CHANNO].M_DATA[no].STATUS&0x6F);	
+
+	dest = &TXData[6];
+	sour = &ChanID[TX_LIST.CHANNO].M_DATA[no].VALUE1;
+	scale =&sr_scale1;
+	
+	for( i =0; i<=7 ; i++)
+	{		/* Mode, Status, Value1, Value2, SR Up, SR Dn, Time1, Time2, Hi value, Low value */
+		if( i == 6)
+			sour++;			
+		if((i==2)||(i==3))		/*Slew Rate Up and Slew Rate Down*/
+		{
+			*dest = (((*sour)*(*scale)) & 0xff00) >> 8;
+			dest++;
+			*dest = ((*sour)*(*scale)) & 0x00ff;
+		}
+		else
+		{			
+			*dest = ( (*sour) & 0xff00) >> 8;
+			dest++;
+			*dest = (*sour) & 0x00ff;
+		}
+		dest++;
+		sour++;
+	}
+	if(ChanID[TX_LIST.CHANNO].M_DATA[no].MODE==P_CV)
+	{
+		TXData[10]=TXData[14];
+		TXData[11]=TXData[15];
+	}
+	TXData[22] = 0x00;
+	TXData[23] = 0x00;
+}
+
+void SaveSeqFun(void)
+{
+	char addr_h[]={ 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c };
+	char no,val_h,val_l,*dest;
+	UWORD *sour;
+	int i;
+	unsigned char *scale;
+	unsigned char sr_scale1=16;
+
+	no =  ChanID[TX_LIST.CHANNO].D_SEQ_DATA.Curr_Number;
+	
+	val_h = no/10;
+	val_l = no - (val_h*10);
+
+	TX_LIST.ADDRH = addr_h[val_h];
+	TX_LIST.ADDRL = val_l << 4;
+
+	TXData[1] = 14;		/* Length = 0x0E*/
+	TXData[2] = TX_LIST.ADDRH;
+	TXData[3] = TX_LIST.ADDRL;
+
+	TXData[4] = ChanID[TX_LIST.CHANNO].D_SEQ_DATA.S_DATA[no].MODE;				/*Mode*/
+	TXData[5] = (ChanID[TX_LIST.CHANNO].D_SEQ_DATA.S_DATA[no].STATUS&0x6F);	/*Status*/
+
+	dest = &TXData[6];
+	sour = &ChanID[TX_LIST.CHANNO].D_SEQ_DATA.S_DATA[no].VALUE1;
+	scale =&sr_scale1;
+	
+	for( i =0; i<=3 ; i++)
+	{		/* Value1, Value2, SR Up, SR Dn */	
+		if((i==2)||(i==3))		/*Slew Rate Up and Slew Rate Down*/
+		{
+			*dest = (((*sour)*(*scale)) & 0xff00) >> 8;
+			dest++;
+			*dest = ((*sour)*(*scale)) & 0x00ff;
+		}
+		else
+		{			
+			*dest = ( (*sour) & 0xff00) >> 8;
+			dest++;
+			*dest = (*sour) & 0x00ff;
+		}		
+		dest++;
+		sour++;
+	}
+}
+
+void SaveSeqFunAll(void)
+{
+	char addr_h[]={ 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c };
+	char no,val_h,val_l,*dest;
+	UWORD *sour;
+	int i;
+	unsigned char *scale;
+	unsigned char sr_scale1=16;
+
+	no =  ChanID[TX_LIST.CHANNO].D_SEQ_DATA.Curr_Number;
+
+	val_h = no/10;
+	val_l = no - (val_h*10);
+
+	TX_LIST.ADDRH = addr_h[val_h];
+	TX_LIST.ADDRL = val_l << 4;
+
+	TXData[1] = 15;		/* Length = 0x0F*/
+	TXData[2] = TX_LIST.ADDRH;
+	TXData[3] = TX_LIST.ADDRL;
+
+	TXData[4] = 0;
+
+	TXData[5] = ChanID[TX_LIST.CHANNO].D_SEQ_DATA.S_DATA[no].MODE;			/*Mode*/
+	TXData[6] = (ChanID[TX_LIST.CHANNO].D_SEQ_DATA.S_DATA[no].STATUS&0x6F);	/*Status*/
+
+	dest = &TXData[7];
+	sour = &ChanID[TX_LIST.CHANNO].D_SEQ_DATA.S_DATA[no].VALUE1;
+	scale =&sr_scale1;
+	
+	for( i =0; i<=3 ; i++)
+	{		/* Value1, Value2, SR Up, SR Dn */	
+		if((i==2)||(i==3))		/*Slew Rate Up and Slew Rate Down*/
+		{
+			*dest = (((*sour)*(*scale)) & 0xff00) >> 8;
+			dest++;
+			*dest = ((*sour)*(*scale)) & 0x00ff;
+		}
+		else
+		{			
+			*dest = ( (*sour) & 0xff00) >> 8;
+			dest++;
+			*dest = (*sour) & 0x00ff;
+		}		
+		dest++;
+		sour++;
+	}
+}
+
+void Para_Ext_Fun(void)
+{
+	UWORD Para_Ext_Data;
+	UWORD FPGA_Data;
+	unsigned short ISR_Status,ISR_Range,ISR_LoadOn,ISR_Alarm;
+	static unsigned char Para_UnReg_Count;
+	
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	p3k_send_tx_list tx_data;	
+	
+	Para_Ext_Data = 0;
+	
+	switch(TX_LIST.ADDRL)
+	{
+		case Para_Ext_Setting: /* Set Parallel Master/Slave Status*/
+			if(UTILITY.LOAD_CTL)		
+				Para_Ext_Data |= Ext_LoadON_Status;
+
+			if(UTILITY.SHORT_CTL)						
+				Para_Ext_Data |= Ext_Short_Status;		
+			
+			if(IRange_Mid==Data_tmp->IRange)		
+				Para_Ext_Data |= Ext_IRange_M_Status;
+			else if(IRange_Low==Data_tmp->IRange)	
+				Para_Ext_Data |= Ext_IRange_L_Status;
+			else									
+				Para_Ext_Data |= Ext_IRange_H_Status;
+
+			if(p3k_Measure_Data.Alarm)	
+				Para_Ext_Data |= Ext_Alarm_Status;
+			
+			Para_Ext_Data |= Set_Parallel_Ext_Load_ON_Input;
+			
+			if(Operation_Master==Data_tmp->CONF.Para_Data.Mode)
+			{
+				if( (Data_tmp->CONF.Para_Data.Parallel_Number)||(Data_tmp->CONF.Para_Data.Booster_Number) )
+				{
+					Para_Ext_Data |= Enable_Parallel;
+					
+					if(LOW_RANGE==Data_tmp->IRange)	
+						Para_Ext_Data |= Set_L_IRange_In_Parallel;
+					else
+						Para_Ext_Data |= Set_H_M_IRange_In_Parallel;	/* High or Mid */
+					
+					Para_Ext_Data |= Set_Parallel_Master|Set_Parallel_I_Monitor_Summary;
+				}
+				else
+					Para_Ext_Data |= Disable_Parallel;
+			}
+			else
+			{
+				if(FPGA_ISR_Data.Para_Enable)
+					Para_Ext_Data |= Set_Parallel_Slave|Set_Parallel_I_Monitor_Summary;
+			}
+
+			if(Ext_Setting_V==Data_tmp->CONF.Ext_Setting.Control)
+			{
+				Para_Ext_Data |= Ext_Control_V;
+				Acess_FPGA(FPGA_EXT_RV_SENSE_Gain,  p3k_Cal_data.Ext_V_Sense.Meas_Value_Gain);
+				Acess_FPGA(FPGA_EXT_RV_SENSE_Offset,p3k_Cal_data.Ext_V_Sense.Meas_Value_Offset);
+			}
+			else if(Ext_Setting_R==Data_tmp->CONF.Ext_Setting.Control)
+			{
+				Para_Ext_Data |= Ext_Control_R;
+				Acess_FPGA(FPGA_EXT_RV_SENSE_Gain,  p3k_Cal_data.Ext_R_Sense.Meas_Value_Gain);
+				Acess_FPGA(FPGA_EXT_RV_SENSE_Offset,p3k_Cal_data.Ext_R_Sense.Meas_Value_Offset);
+			}
+			else if(Ext_Setting_InvR==Data_tmp->CONF.Ext_Setting.Control)
+			{
+				Para_Ext_Data |= Ext_Control_R + Ext_Control_Invert;
+				Acess_FPGA(FPGA_EXT_RV_SENSE_Gain,	p3k_Cal_data.Ext_R_Sense.Meas_Value_Gain);
+				Acess_FPGA(FPGA_EXT_RV_SENSE_Offset,p3k_Cal_data.Ext_R_Sense.Meas_Value_Offset);
+			}
+			else
+				Para_Ext_Data |= 0;
+
+			if( (Data_tmp->CONF.Ext_Setting.Control)&&(CR_MODE==Data_tmp->CURRMODE) )
+				Para_Ext_Data |= Ext_Control_CR_MODE;
+			
+			Acess_FPGA(FPGA_External_Applied_Operation_Control,Para_Ext_Data);
+			//OSTimeDly(1);
+			FPGA_Ctrl();
+			break;
+		case Para_Ext_Status: /* (Every 20ms/Times) OR Interrupt Occur */
+			if(Prog_Load==P3k_Chan_Data.Load_Type)
+			{
+				FPGA_Data = Acess_FPGA(FPGA_Sequence_Mode_Set_ID,NULL);
+				break;
+			}
+			
+			FPGA_Data  = Acess_FPGA(FPGA_External_Status,NULL);
+			
+			ISR_Status = FPGA_Data & External_Action_ISR;
+			ISR_Range  = FPGA_Data & 0x0006;
+			ISR_LoadOn = FPGA_Data & External_Status_Load_ON;
+			ISR_Alarm  = FPGA_Data & External_Status_Alarm;
+
+			if(ISR_Status)
+				FPGA_ISR_Data.ISR_Flag = 1;
+			else
+				FPGA_ISR_Data.ISR_Flag = 0;
+
+			if(Data_tmp->CONF.Ext_Setting.Control)					/*External Control*/
+			{
+				if(ISR_Range == External_Status_IRange_M)		
+					FPGA_ISR_Data.ISR_Range = IRange_Mid;
+				else if(ISR_Range == External_Status_IRange_L)	
+					FPGA_ISR_Data.ISR_Range = IRange_Low;
+				else
+					FPGA_ISR_Data.ISR_Range = IRange_High;
+			}
+
+			if(Operation_Slave == Data_tmp->CONF.Para_Data.Mode)	/*Parallel Control*/
+			{
+				if(ISR_Range == External_Status_IRange_L)		
+					FPGA_ISR_Data.ISR_Range = IRange_Low;
+				else													
+					FPGA_ISR_Data.ISR_Range = IRange_High;			/*High or Mid*/
+
+				if(ISR_LoadOn)					
+					FPGA_ISR_Data.Para_Enable = Switch_ON;
+				else													
+					FPGA_ISR_Data.Para_Enable = Switch_OFF;
+			}
+			else	/* Operation_Master */
+			{
+				if(Data_tmp->CONF.Ext_Setting.LoadOn_IN)
+				{
+					if((!ISR_LoadOn && (Data_tmp->CONF.Ext_Setting.LoadOn_IN == 1)) || ((ISR_LoadOn) && (Data_tmp->CONF.Ext_Setting.LoadOn_IN == 2)))						
+						FPGA_ISR_Data.ISR_Load = Switch_ON;
+					else
+						FPGA_ISR_Data.ISR_Load = Switch_OFF;
+
+					tx_data.ADDRH = Para_Ext_Command;
+					tx_data.ADDRL = Para_Ext_Setting;
+					SendTXData(&tx_data);	
+				}
+				else
+					FPGA_ISR_Data.ISR_Load = Switch_ON;
+				
+				if(ISR_Alarm)
+				{
+					//if(Data_tmp->CONF.Ext_Setting.Control)
+					if((M_num != P_CAL_MODE) && (M_num != P_Test_Func))
+					{
+						Alarm_Process(Para_Alarm,Set_Alarm);
+						
+						tx_data.ADDRH = Para_Ext_Command;
+						tx_data.ADDRL = Para_Ext_Setting;
+						SendTXData(&tx_data);
+					}
+					Para_UnReg_Count++;
+				}
+				else
+				{
+					//if((Data_tmp->CONF.Ext_Setting.Control) && (!Ext_UnReg_Flag))
+					if((!Ext_UnReg_Flag) && (M_num != P_CAL_MODE) && (M_num != P_Test_Func))
+					{
+						Alarm_Process(Para_Alarm,Clear_Alarm);
+					
+						tx_data.ADDRH = Para_Ext_Command;
+						tx_data.ADDRL = Para_Ext_Setting;
+						SendTXData(&tx_data);	
+					}
+					Para_UnReg_Count = 0;
+				}
+				
+				if(Para_UnReg_Count == 50)
+				{
+					if((p3k_Measure_Data.Alarm == UnReg_Alarm) || (p3k_Measure_Data.Alarm == No_Alarm))
+						Para_UnReg_Count = 50;
+					else
+						Alarm_Process(Para_Alarm,Set_Alarm);
+				}					
+			}
+			break;
+	}
+}
+
+void RecallMemFun(void)
+{
+	char addr_h[]={ 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c };
+	char no,val_h, val_l;	
+
+	no = p3k_File_Utility_BAR.MEMORY_ADDR;
+	val_h= no/10;
+	val_l = no - (val_h*10);
+
+	TX_LIST.ADDRH = addr_h[val_h];
+	TX_LIST.ADDRL = val_l << 4;
+
+	TXData[2] = TX_LIST.ADDRH;
+	TXData[3] = TX_LIST.ADDRL;
+}
+
+UWORD Read_FPGA_Status(UWORD Interval_Time)
+{
+	UWORD Read_Data_1;
+	UWORD Read_Data_2		= 0;
+	UWORD Repeat_Number		= 0;
+	UWORD Function_TimeOut	= 100;
+	while(Repeat_Number<10)
+	{
+		OSTimeDly(Interval_Time);
+		Read_Data_1 = Acess_FPGA(FPGA_Status,NULL);
+		if(Read_Data_1==Read_Data_2)	
+			Repeat_Number++;
+		else							
+			Repeat_Number = 0;
+		Function_TimeOut--;
+		Read_Data_2 = Read_Data_1;
+		if(Function_TimeOut==0)
+		{
+			printf("Read_FPGA_Status Error\n");
+			Read_Data_1 = 0;
+			break;
+		}
+	}
+	return Read_Data_1;
+}
+
+void Cal_XYZ_Sensor(UBYTE Select_Sensor,UBYTE Cal_Range)
+{
+	/*Select_Sensor=0, X Sensor*/
+	/*Select_Sensor=1, X Sensor*/
+	/*Select_Sensor=2, Y Sensor*/
+	char i,Error_Message[50];
+	UWORD Shift_Value_Temp,Cal_Status_Temp,AD633_Setting;
+	UWORD *XYZ_Value_Temp,*XYZ_Value;
+	ULONG OS_Ref_Setting;
+	if( (Select_Sensor>2)||(Cal_Range>2) )
+	{
+		Debug_printf("Cal_XYZ_Sensor Error!!\n");
+		return;
+	}
+	if(IRange_High==Cal_Range)
+		Cal_Range = IRange_Mid;
+
+	if(IRange_Mid==Cal_Range)
+	{
+		if(PSense_X==Select_Sensor)
+		{
+			AD633_Setting	= Set_Calibration_AD633_X_OS;
+			OS_Ref_Setting	= FPGA_XH_OS_Ref;
+			sprintf(Error_Message," PSense_XH Calibration Error!! ");
+		}
+		else if(PSense_Y==Select_Sensor)
+		{
+			AD633_Setting	= Set_Calibration_AD633_Y_OS;
+			OS_Ref_Setting	= FPGA_YH_OS_Ref;
+			sprintf(Error_Message," PSense_YH Calibration Error!! ");
+		}
+		else if(PSense_Z==Select_Sensor)
+		{
+			AD633_Setting	= Set_Calibration_AD633_Z_OS;
+			OS_Ref_Setting	= FPGA_ZH_OS_Ref;
+			sprintf(Error_Message," PSense_ZH Calibration Error!! ");
+		}
+	}
+	else
+	{
+		if(PSense_X==Select_Sensor)
+		{
+			AD633_Setting	= Set_Calibration_AD633_X_OS;
+			OS_Ref_Setting	= FPGA_XL_OS_Ref;
+			sprintf(Error_Message," PSense_XL Calibration Error!! ");
+		}
+		else if(PSense_Y==Select_Sensor)
+		{
+			AD633_Setting	= Set_Calibration_AD633_Y_OS;
+			OS_Ref_Setting	= FPGA_YL_OS_Ref;
+			sprintf(Error_Message," PSense_YL Calibration Error!! ");
+		}
+		else if(PSense_Z==Select_Sensor)
+		{
+			AD633_Setting	= Set_Calibration_AD633_Z_OS;
+			OS_Ref_Setting	= FPGA_ZL_OS_Ref;
+			sprintf(Error_Message," PSense_ZL Calibration Error!! ");
+		}
+	}
+	
+	XYZ_Value_Temp	= &P3K_CALIBRATION_BAR.PSensor.XL_Value	+ Select_Sensor + Cal_Range*3;
+	XYZ_Value		= &p3k_Cal_data.PSensor.XL_Value		+ Select_Sensor + Cal_Range*3;
+	
+	Acess_FPGA(FPGA_On_Off_Reference_Setting,AD633_Setting|Set_Protection_Ref_Adjust_ON);
+	OSTimeDly(5);
+	*XYZ_Value_Temp = 0;
+	for(i=0 ; i<16 ; i++)
+	{
+		Shift_Value_Temp = Compare_Value>>i;
+		Acess_FPGA(OS_Ref_Setting,Shift_Value_Temp|(*XYZ_Value_Temp));
+		OSTimeDly(20);
+
+		Cal_Status_Temp = Read_FPGA_Status(1);
+
+		if(Cal_Status_Temp==0)
+		{
+			Menu_Message(Error_Message,50,210);
+			CtrlFlag1 |= Disp_Middle_Message;
+			DMA_Update_Flag = 1;
+			Update_Panel();
+			OSTimeDly(200);
+			(*XYZ_Value_Temp) = (*XYZ_Value);
+			break;
+		}
+		if(PSense_Z==Select_Sensor)
+		{
+			if((Cal_Status_Temp&0x0004)==0)
+				Shift_Value_Temp = 0;
+		}
+		else
+		{
+			if((Cal_Status_Temp&0x0004)!=0)
+				Shift_Value_Temp = 0;
+		}
+		
+		(*XYZ_Value_Temp) |= Shift_Value_Temp;
+	}
+	(*XYZ_Value) = (*XYZ_Value_Temp);
+	Acess_FPGA(OS_Ref_Setting,(*XYZ_Value));
+}
+
+extern void Show_Prot_Error_Window(UBYTE Error_Mode,double Error_Gain,double Error_Offset,UWORD Input_HP,UWORD Input_LP,UWORD System_HP,UWORD System_LP);
+void CalibrationFun(void)
+{
+	unsigned short VM_Range=0,Circuit_SW0=0,Circuit_SW1=0;
+	P3k_Data_Str	*Data_tmp = &P3k_Chan_Data;
+	UWORD *OFFSET_MON_Point,SR_Value,CP_MAX_Value;
+	ULONG I_V_MON_Total,Register_Temp;
+	int i,j;
+	UWORD High_Point,Low_Point;
+	char val;
+	UWORD Shift_Value_Temp,Cal_Status_Temp,Cal_Data_Temp,Res = 0;
+	
+	
+	if( (P3K_CALIBRATION_BAR.MODE==CV_MODE)||(P3K_CALIBRATION_BAR.MODE==CxCV_MODE) )
+	{
+		if(P3K_CALIBRATION_BAR.RANGE==LOW_RANGE)	
+			VM_Range = VM_L_Range;
+		else									
+			VM_Range = 0;
+	}
+	else
+		VM_Range = 0;
+
+	val = P3K_CALIBRATION_BAR.MODE+(P3K_CALIBRATION_BAR.RANGE*MODE_Number);
+
+	switch(TX_LIST.ADDRL)
+	{
+		case Cal_FPGA_Start:		/* Cal Start : Send Load On Command */
+			Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_ON);
+			break;
+		case Cal_FPGA_End:					/* Cal End :  OCP,Rating OCP,OPP,CPP Calibration & Send Load Off Command */			
+			if(P3K_CALIBRATION_BAR.POINT)	
+				OFFSET_MON_Point = &P3K_CALIBRATION_BAR.Monitor_Low;
+			else						
+				OFFSET_MON_Point = &P3K_CALIBRATION_BAR.Monitor_High;
+
+			if(P3K_CALIBRATION_BAR.MODE==CV_MODE)
+				Register_Temp = FPGA_V_Sense;
+			else if( (P3K_CALIBRATION_BAR.MODE==Ext_V_CC_MODE)||(P3K_CALIBRATION_BAR.MODE==Ext_R_CC_MODE) )
+				Register_Temp = FPGA_EXT_RV_SENSE;
+			else
+				Register_Temp = FPGA_I_Sense;
+
+			I_V_MON_Total = 0;
+			for(i=0; i<10; i++)
+			{
+				I_V_MON_Total += Acess_FPGA(Register_Temp,NULL);
+				OSTimeDly(1);
+			}
+			*OFFSET_MON_Point = I_V_MON_Total /10;
+
+			if( (P3K_CALIBRATION_BAR.MODE==CC_MODE)&&((P3K_CALIBRATION_BAR.RANGE==HIGH_RANGE)||(P3K_CALIBRATION_BAR.RANGE == LOW_RANGE)) )
+			{
+				/* OCP Calibration  */
+				Acess_FPGA(FPGA_On_Off_Latch_Setting, Set_All_Prot_Limit);
+				OSTimeDly(5);
+				Cal_Data_Temp = 0;
+				for(i=0 ; i<16 ; i++)
+				{
+					Shift_Value_Temp = Compare_Value>>i;
+					if(P3K_CALIBRATION_BAR.RANGE == HIGH_RANGE)
+						Acess_FPGA(FPGA_CX_H_OCP,Shift_Value_Temp|Cal_Data_Temp);
+					else									
+						Acess_FPGA(FPGA_CX_L_OCP,Shift_Value_Temp|Cal_Data_Temp);
+					OSTimeDly(20);
+
+					Cal_Status_Temp = Read_FPGA_Status(1);
+
+					if(Cal_Status_Temp==0)
+					{
+						Menu_Message(" OCP Calibration Error!! ",50,210);
+						CtrlFlag1 |= Disp_Middle_Message;
+						DMA_Update_Flag = 1;
+						Update_Panel();
+						OSTimeDly(200);
+					}
+					if((Cal_Status_Temp&OCP_Prot_Event)==0)
+						Shift_Value_Temp = 0;
+					Cal_Data_Temp |= Shift_Value_Temp;
+				}
+				if(P3K_CALIBRATION_BAR.POINT)	
+					P3K_CALIBRATION_BAR.OCP_Low_Point	= Cal_Data_Temp;
+				else						
+					P3K_CALIBRATION_BAR.OCP_High_Point	= Cal_Data_Temp;
+				/* Rating OCP */
+				Acess_FPGA(FPGA_On_Off_Latch_Setting, Set_All_Prot_Limit);
+				OSTimeDly(5);
+				Cal_Data_Temp = 0;
+				for(i=0 ; i<16 ; i++)
+				{
+					Shift_Value_Temp = Compare_Value>>i;
+					if(P3K_CALIBRATION_BAR.RANGE==HIGH_RANGE)	
+						Acess_FPGA(FPGA_CX_H_ROCP,Shift_Value_Temp|Cal_Data_Temp);
+					else									
+						Acess_FPGA(FPGA_CX_L_ROCP,Shift_Value_Temp|Cal_Data_Temp);
+					OSTimeDly(20);
+
+					Cal_Status_Temp = Read_FPGA_Status(1);
+
+					if(Cal_Status_Temp==0)
+					{
+						Menu_Message(" Rating OCP Calibration Error!! ",50,210);
+						CtrlFlag1 |= Disp_Middle_Message;
+						DMA_Update_Flag = 1;
+						Update_Panel();
+						OSTimeDly(200);
+					}
+					if((Cal_Status_Temp&Rating_OCP_Prot)==0)
+						Shift_Value_Temp = 0;
+					Cal_Data_Temp |= Shift_Value_Temp;
+				}
+				if(P3K_CALIBRATION_BAR.POINT)	
+					P3K_CALIBRATION_BAR.Rating_OCP_Low_Point	= Cal_Data_Temp;
+				else						
+					P3K_CALIBRATION_BAR.Rating_OCP_High_Point	= Cal_Data_Temp;
+			}
+
+			if( (P3K_CALIBRATION_BAR.MODE==CP_MODE)&&((P3K_CALIBRATION_BAR.RANGE == HIGH_RANGE)||(P3K_CALIBRATION_BAR.RANGE == LOW_RANGE)) )
+			{
+				/* OPP Calibration */
+				Acess_FPGA(FPGA_On_Off_Latch_Setting, Set_All_Prot_Limit);
+				OSTimeDly(5);
+				Cal_Data_Temp = 0;
+				FIO_ANOM_0311_FLAG_W(PF12,pFIO_FLAG_S);
+				for(i=0 ; i<16 ; i++)
+				{
+					Shift_Value_Temp = Compare_Value>>i;
+					if(P3K_CALIBRATION_BAR.RANGE == HIGH_RANGE)	
+						Acess_FPGA(FPGA_CX_H_OPP,Shift_Value_Temp|Cal_Data_Temp);
+					else									
+						Acess_FPGA(FPGA_CX_L_OPP,Shift_Value_Temp|Cal_Data_Temp);
+					OSTimeDly(20);
+
+					FIO_ANOM_0311_FLAG_W(PF12,pFIO_FLAG_C);
+					Cal_Status_Temp = Read_FPGA_Status(1);
+					FIO_ANOM_0311_FLAG_W(PF12,pFIO_FLAG_S);
+						
+					if(Cal_Status_Temp==0)
+					{
+						Menu_Message(" OPP Calibration Error!! ",50,210);
+						CtrlFlag1 |= Disp_Middle_Message;
+						DMA_Update_Flag = 1;
+						Update_Panel();
+						OSTimeDly(200);
+					}
+					
+					if((Cal_Status_Temp&OPP_Prot_Event)==0)
+						Shift_Value_Temp = 0;
+					Cal_Data_Temp |= Shift_Value_Temp;
+				}
+
+				if(P3K_CALIBRATION_BAR.POINT)	
+					P3K_CALIBRATION_BAR.OPP_Low_Point	= Cal_Data_Temp;
+				else						
+					P3K_CALIBRATION_BAR.OPP_High_Point	= Cal_Data_Temp;
+
+				/*	CPP  Calibration  */
+				Acess_FPGA(FPGA_On_Off_Latch_Setting, Set_All_Prot_Limit);
+				OSTimeDly(5);
+				Cal_Data_Temp = 0;
+				for(i=0;i<16;i++)
+				{
+					Shift_Value_Temp = Compare_Value>>i;
+					if(P3K_CALIBRATION_BAR.RANGE == HIGH_RANGE)	
+						Acess_FPGA(FPGA_CX_H_CPP,Shift_Value_Temp|Cal_Data_Temp );
+					else									
+						Acess_FPGA(FPGA_CX_L_CPP,Shift_Value_Temp|Cal_Data_Temp );
+					OSTimeDly(20); 
+#if 0					
+					if(i<8)			Cal_Status_Temp = Read_FPGA_Status(1);
+					else if(i>11)	Cal_Status_Temp = Read_FPGA_Status(4);
+					else			Cal_Status_Temp = Read_FPGA_Status(3); 
+#else
+					FIO_ANOM_0311_FLAG_W(PF12,pFIO_FLAG_C);
+					Cal_Status_Temp = Read_FPGA_Status(1);
+					FIO_ANOM_0311_FLAG_W(PF12,pFIO_FLAG_S);
+#endif
+					
+					if(Cal_Status_Temp==0)
+					{
+						Menu_Message(" CPP Calibration Error!! ",50,210);
+						CtrlFlag1 |= Disp_Middle_Message;
+						DMA_Update_Flag = 1;
+						Update_Panel();
+						OSTimeDly(200);
+					}
+					
+					if((Cal_Status_Temp&CPP_Prot_Event)==0)
+						Shift_Value_Temp = 0;
+					Cal_Data_Temp |= Shift_Value_Temp;
+				}
+				
+				if(P3K_CALIBRATION_BAR.POINT)	
+					P3K_CALIBRATION_BAR.CPP_Low_Point	= Cal_Data_Temp;
+				else						
+					P3K_CALIBRATION_BAR.CPP_High_Point	= Cal_Data_Temp;
+			}
+			/*	CxCV Calibration  */
+			if(P3K_CALIBRATION_BAR.MODE == CxCV_MODE)
+			{
+				if(P3K_CALIBRATION_BAR.POINT)	
+					P3K_CALIBRATION_BAR.CxCV_Low_Point	= P3K_CALIBRATION_BAR.Set_Value_Low;
+				else						
+					P3K_CALIBRATION_BAR.CxCV_High_Point	= P3K_CALIBRATION_BAR.Set_Value_High;
+			}
+			Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);
+			break;
+		case Cal_FPGA_Fail:
+			Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);
+			break;
+		case Cal_FPGA_Load_Meas_Default:
+			Acess_FPGA(FPGA_V_Sense_H_Gain,	  p3k_Cal_data.Volt[1].Meas_Value_Gain);
+			Acess_FPGA(FPGA_V_Sense_H_Offset,(p3k_Cal_data.Volt[1].Meas_Value_Gain*p3k_Cal_data.Volt[1].Meas_Value_Offset/65535.0));
+			Acess_FPGA(FPGA_V_Sense_L_Gain,	  p3k_Cal_data.Volt[0].Meas_Value_Gain);
+			Acess_FPGA(FPGA_V_Sense_L_Offset,(p3k_Cal_data.Volt[0].Meas_Value_Gain*p3k_Cal_data.Volt[0].Meas_Value_Offset/65535.0));
+			Acess_FPGA(FPGA_I_Sense_H_Gain,	  p3k_Cal_data.Curr[2].Meas_Value_Gain);
+			Acess_FPGA(FPGA_I_Sense_H_Offset,(p3k_Cal_data.Curr[2].Meas_Value_Gain*p3k_Cal_data.Curr[2].Meas_Value_Offset/65535.0));
+			Acess_FPGA(FPGA_I_Sense_M_Gain,	  p3k_Cal_data.Curr[1].Meas_Value_Gain);
+			Acess_FPGA(FPGA_I_Sense_M_Offset,(p3k_Cal_data.Curr[1].Meas_Value_Gain*p3k_Cal_data.Curr[1].Meas_Value_Offset/65535.0));
+			Acess_FPGA(FPGA_I_Sense_L_Gain,	  p3k_Cal_data.Curr[0].Meas_Value_Gain);
+			Acess_FPGA(FPGA_I_Sense_L_Offset,(p3k_Cal_data.Curr[0].Meas_Value_Gain*p3k_Cal_data.Curr[0].Meas_Value_Offset/65535.0));
+			break;
+		case Cal_FPGA_PSensor_H: 	/*  P Sense H Calibration */	
+			Circuit_SW0 = I_Calibration_Circuit_Switch_Control[(CC_MODE*6) + (IRange_High*2) + 0];
+			Circuit_SW1 = I_Calibration_Circuit_Switch_Control[(CC_MODE*6) + (IRange_High*2) + 1];
+			
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1 |CC_CR_CP_Response_1_10|SlewRate_L_Range);
+			
+			Cal_XYZ_Sensor(PSense_Z,IRange_High);
+			Cal_XYZ_Sensor(PSense_X,IRange_High);
+			Cal_XYZ_Sensor(PSense_Y,IRange_High);
+			Acess_FPGA(FPGA_On_Off_Reference_Setting,Set_Normal_P_Sense_Operation |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode );
+			break;			
+		case Cal_FPGA_Prot: 	/* Protection  Calibration */
+			if( (P3K_CALIBRATION_BAR.MODE==CC_MODE)&&((P3K_CALIBRATION_BAR.RANGE==HIGH_RANGE)||(P3K_CALIBRATION_BAR.RANGE==LOW_RANGE)) )
+			{	
+				High_Point	= P3K_CALIBRATION_BAR.HP_Volt	/ (ptrMODEL_TYPE->CALI_HP)[val].Resolution;
+				Low_Point	= P3K_CALIBRATION_BAR.LP_Volt	/ (ptrMODEL_TYPE->CALI_HP)[val].Resolution;
+				/* OCP */
+				P3K_CALIBRATION_BAR.OCP_Gain	= (double) (P3K_CALIBRATION_BAR.OCP_High_Point - P3K_CALIBRATION_BAR.OCP_Low_Point) /(double) (High_Point - Low_Point);
+				P3K_CALIBRATION_BAR.OCP_Offset	= ( (double)P3K_CALIBRATION_BAR.OCP_High_Point	- (P3K_CALIBRATION_BAR.OCP_Gain*High_Point) );
+				
+				if(P3K_CALIBRATION_BAR.OCP_Offset < 0)
+					Cal_Offset_Error |= OCP_Err;
+
+				if(((((ptrMODEL_TYPE->PROT)[2].Max)* P3K_CALIBRATION_BAR.OCP_Gain)+P3K_CALIBRATION_BAR.OCP_Offset)>65535.0)
+				{
+					//Show_Prot_Error_Window(0,P3K_CALIBRATION_BAR.OCP_Gain,P3K_CALIBRATION_BAR.OCP_Offset,High_Point,Low_Point,P3K_CALIBRATION_BAR.OCP_High_Point,P3K_CALIBRATION_BAR.OCP_Low_Point);
+					P3K_CALIBRATION_BAR.OCP_Gain	= 1;
+					P3K_CALIBRATION_BAR.OCP_Offset	= 0;
+				}
+				/* Rating OCP*/
+				P3K_CALIBRATION_BAR.Rating_OCP_Gain		= (double) (P3K_CALIBRATION_BAR.Rating_OCP_High_Point - P3K_CALIBRATION_BAR.Rating_OCP_Low_Point) /(double) (High_Point - Low_Point);
+				P3K_CALIBRATION_BAR.Rating_OCP_Offset	= ( (double)P3K_CALIBRATION_BAR.Rating_OCP_High_Point - (P3K_CALIBRATION_BAR.Rating_OCP_Gain*High_Point) );
+
+				if(P3K_CALIBRATION_BAR.Rating_OCP_Offset < 0)
+					Cal_Offset_Error |= ROCP_Err;
+				
+				if(((((ptrMODEL_TYPE->PROT)[2].Max)* P3K_CALIBRATION_BAR.Rating_OCP_Gain)+P3K_CALIBRATION_BAR.Rating_OCP_Offset)>65535.0)
+				{
+					//Show_Prot_Error_Window(1,P3K_CALIBRATION_BAR.Rating_OCP_Gain,P3K_CALIBRATION_BAR.Rating_OCP_Offset,High_Point,Low_Point,P3K_CALIBRATION_BAR.Rating_OCP_High_Point,P3K_CALIBRATION_BAR.Rating_OCP_Low_Point);
+					P3K_CALIBRATION_BAR.Rating_OCP_Gain		= 1;
+					P3K_CALIBRATION_BAR.Rating_OCP_Offset	= 0;
+				}
+			}
+			
+			if( (P3K_CALIBRATION_BAR.MODE==CP_MODE)&&((P3K_CALIBRATION_BAR.RANGE==HIGH_RANGE)||(P3K_CALIBRATION_BAR.RANGE==LOW_RANGE)) )
+			{
+				High_Point	= (P3K_CALIBRATION_BAR.HP_Volt	* P3K_CALIBRATION_BAR.HP_Curr)	/ (ptrMODEL_TYPE->CP)[(IRange_High * 10)].Resolution;
+				Low_Point	= (P3K_CALIBRATION_BAR.LP_Volt	* P3K_CALIBRATION_BAR.LP_Curr)	/ (ptrMODEL_TYPE->CP)[(IRange_High * 10)].Resolution;
+				/* OPP */
+				P3K_CALIBRATION_BAR.OPP_Gain	= (double) (P3K_CALIBRATION_BAR.OPP_High_Point - P3K_CALIBRATION_BAR.OPP_Low_Point) /(double) (High_Point - Low_Point);
+				P3K_CALIBRATION_BAR.OPP_Offset	= ( (double)P3K_CALIBRATION_BAR.OPP_High_Point	- (P3K_CALIBRATION_BAR.OPP_Gain*High_Point) );
+
+				if(P3K_CALIBRATION_BAR.OPP_Offset < 0)
+					Cal_Offset_Error |= OPP_Err;
+				
+				if(IRange_High==P3K_CALIBRATION_BAR.RANGE)	
+					CP_MAX_Value = (ptrMODEL_TYPE->PROT)[5].Max;
+				else									
+					CP_MAX_Value = (ptrMODEL_TYPE->PROT)[5].Max*0.3;
+					
+				if(((CP_MAX_Value*P3K_CALIBRATION_BAR.OPP_Gain)+P3K_CALIBRATION_BAR.OPP_Offset)>65535.0)
+				{
+					//Show_Prot_Error_Window(2,P3K_CALIBRATION_BAR.OPP_Gain,P3K_CALIBRATION_BAR.OPP_Offset,High_Point,Low_Point,P3K_CALIBRATION_BAR.OPP_High_Point,P3K_CALIBRATION_BAR.OPP_Low_Point);
+					P3K_CALIBRATION_BAR.OPP_Gain	= 1;
+					P3K_CALIBRATION_BAR.OPP_Offset	= 0;
+				}
+				/* CPP */
+				P3K_CALIBRATION_BAR.CPP_Gain	= (double) (P3K_CALIBRATION_BAR.CPP_High_Point - P3K_CALIBRATION_BAR.CPP_Low_Point) /(double) (High_Point - Low_Point);
+				P3K_CALIBRATION_BAR.CPP_Offset	= ( (double)P3K_CALIBRATION_BAR.CPP_High_Point	- (P3K_CALIBRATION_BAR.CPP_Gain*High_Point) );
+
+				if(P3K_CALIBRATION_BAR.CPP_Offset < 0)
+					Cal_Offset_Error |= CPP_Err;
+				
+				if(((CP_MAX_Value*P3K_CALIBRATION_BAR.CPP_Gain)+P3K_CALIBRATION_BAR.CPP_Offset)>65535.0)
+				{
+					//Show_Prot_Error_Window(3,P3K_CALIBRATION_BAR.CPP_Gain,P3K_CALIBRATION_BAR.CPP_Offset,High_Point,Low_Point,P3K_CALIBRATION_BAR.CPP_High_Point,P3K_CALIBRATION_BAR.CPP_Low_Point);
+					P3K_CALIBRATION_BAR.CPP_Gain	= 1;
+					P3K_CALIBRATION_BAR.CPP_Offset	= 0;
+				}
+			}
+			/*	CxCV Calibration  */
+			if(P3K_CALIBRATION_BAR.MODE == CxCV_MODE)
+			{
+				High_Point	= P3K_CALIBRATION_BAR.HP_Volt	/ (ptrMODEL_TYPE->CALI_HP)[val].Resolution;
+				Low_Point	= P3K_CALIBRATION_BAR.LP_Volt	/ (ptrMODEL_TYPE->CALI_HP)[val].Resolution;
+
+				P3K_CALIBRATION_BAR.CxCV_Gain	= (double) (P3K_CALIBRATION_BAR.CxCV_High_Point - P3K_CALIBRATION_BAR.CxCV_Low_Point) /(double) (High_Point - Low_Point);
+				P3K_CALIBRATION_BAR.CxCV_Offset	= ( (double)P3K_CALIBRATION_BAR.CxCV_High_Point	- (P3K_CALIBRATION_BAR.CxCV_Gain*High_Point) );
+
+				if(P3K_CALIBRATION_BAR.CxCV_Offset < 0)
+					Cal_Offset_Error |= CXCV_Err;
+
+				if(((((ptrMODEL_TYPE->CV)[0].Max)* P3K_CALIBRATION_BAR.CxCV_Gain)+P3K_CALIBRATION_BAR.CxCV_Offset)>65535.0)
+				{
+					//Show_Prot_Error_Window(4,P3K_CALIBRATION_BAR.CxCV_Gain,P3K_CALIBRATION_BAR.CxCV_Offset,High_Point,Low_Point,P3K_CALIBRATION_BAR.CxCV_High_Point,P3K_CALIBRATION_BAR.CxCV_Low_Point);
+					P3K_CALIBRATION_BAR.CxCV_Gain	= 1;
+					P3K_CALIBRATION_BAR.CxCV_Offset	= 0;
+				}
+
+				P3K_CALIBRATION_BAR.CxCV = Step_To_CNT(Data_tmp->CV.STA[Data_tmp->VRange].VALUE1,P3K_CALIBRATION_BAR.CxCV_Gain,P3K_CALIBRATION_BAR.CxCV_Offset);
+				if(HIGH_RANGE==P3K_CALIBRATION_BAR.RANGE)	
+					Acess_FPGA(Cx_CV_H_Value, P3K_CALIBRATION_BAR.CxCV);
+				else									
+					Acess_FPGA(Cx_CV_L_Value, P3K_CALIBRATION_BAR.CxCV);
+			}
+			
+			Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);
+			break;
+		case Cal_FPGA_Load_Cal_Default: /* Load  Calibration Default  & Calibration Start*/
+			Acess_FPGA(FPGA_V_Sense_H_Gain,		Max_Value);
+			Acess_FPGA(FPGA_V_Sense_L_Gain,		Max_Value);
+			Acess_FPGA(FPGA_V_Sense_H_Offset,	0);
+			Acess_FPGA(FPGA_V_Sense_L_Offset,	0);
+
+			Acess_FPGA(FPGA_I_Sense_H_Gain,		Max_Value);
+			Acess_FPGA(FPGA_I_Sense_M_Gain, 	Max_Value);
+			Acess_FPGA(FPGA_I_Sense_L_Gain, 	Max_Value);
+			Acess_FPGA(FPGA_I_Sense_H_Offset,	0);
+			Acess_FPGA(FPGA_I_Sense_M_Offset,	0);
+			Acess_FPGA(FPGA_I_Sense_L_Offset,	0);
+
+			Acess_FPGA(FPGA_EXT_RV_SENSE_Gain,  Max_Value);
+			Acess_FPGA(FPGA_EXT_RV_SENSE_Offset,0);
+			
+			Acess_FPGA(Cx_CV_H_Step, 0);
+			Acess_FPGA(Cx_CV_L_Step, 0);
+			if( ((P3K_CALIBRATION_BAR.MODE==F_IMON_MODE)||(P3K_CALIBRATION_BAR.MODE==R_IMON_MODE))&&(P3K_CALIBRATION_BAR.POINT) )
+			{
+				Acess_FPGA(FPGA_Rear_IMON_Output_Adjust,63);
+				Acess_FPGA(FPGA_Front_IMON_Output_Adjust,63);
+			}
+			else
+			{
+				Acess_FPGA(FPGA_Rear_IMON_Output_Adjust,0);
+				Acess_FPGA(FPGA_Front_IMON_Output_Adjust,0);
+			}
+
+			Acess_FPGA(FPGA_On_Off_Latch_Setting, Set_All_Prot_Limit);
+
+			if(P3K_CALIBRATION_BAR.MODE==Ext_V_CC_MODE)			
+				Acess_FPGA(FPGA_External_Applied_Operation_Control,Ext_Control_V);
+			else if(P3K_CALIBRATION_BAR.MODE==Ext_R_CC_MODE)	
+				Acess_FPGA(FPGA_External_Applied_Operation_Control,Ext_Control_R);
+			else											
+				Acess_FPGA(FPGA_External_Applied_Operation_Control,Ext_Control_OFF);
+
+			Circuit_SW0 = I_Calibration_Circuit_Switch_Control[(P3K_CALIBRATION_BAR.MODE*6) + (P3K_CALIBRATION_BAR.RANGE*2) + 0];
+			Circuit_SW1 = I_Calibration_Circuit_Switch_Control[(P3K_CALIBRATION_BAR.MODE*6) + (P3K_CALIBRATION_BAR.RANGE*2) + 1];
+
+			if( (P3K_CALIBRATION_BAR.MODE==CR_MODE)||(P3K_CALIBRATION_BAR.MODE==CxCV_MODE) )
+				SR_Value = (ptrMODEL_TYPE->CR[P3K_CALIBRATION_BAR.RANGE*10+2].Max * 20) /10;
+			else if(P3K_CALIBRATION_BAR.MODE==CP_MODE)
+				SR_Value = CP_SR_CNT;
+			else if(CV_MODE==P3K_CALIBRATION_BAR.MODE)
+			{
+				if(IRange_High==P3K_CALIBRATION_BAR.RANGE)
+				{
+					//SR_Value = 600;
+					SR_Value = 7000;
+					Res = CV_Response_L;
+				}
+				else
+				{
+					//SR_Value = 6000;
+					SR_Value = 7000;
+					Res = CV_Response_L;
+				}
+			}
+			else
+				SR_Value = ptrMODEL_TYPE->CC[P3K_CALIBRATION_BAR.RANGE*10+2].Max * 20;
+			
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1 |CC_CR_CP_Response_1_2|SlewRate_L_Range|Res);
+			Acess_FPGA(FPGA_H_Level_Slew_Rate, SR_Value);
+
+			if(P3K_CALIBRATION_BAR.POINT)	
+				Cal_Data_Temp = P3K_CALIBRATION_BAR.Set_Value_Low;
+			else						
+				Cal_Data_Temp = P3K_CALIBRATION_BAR.Set_Value_High;
+			
+			if(P3K_CALIBRATION_BAR.MODE==CxCV_MODE)
+			{
+				if(P3K_CALIBRATION_BAR.RANGE == LOW_RANGE)	
+					Acess_FPGA(Cx_CV_L_Value, Cal_Data_Temp);
+				else									
+					Acess_FPGA(Cx_CV_H_Value, Cal_Data_Temp);
+				Acess_FPGA(FPGA_H_Level_Setting, Cal_Data_Temp);
+			}
+			else
+			{
+				Acess_FPGA(FPGA_H_Level_Setting, Cal_Data_Temp);
+				Acess_FPGA(Cx_CV_H_Value, P3K_CALIBRATION_BAR.CxCV);
+				Acess_FPGA(Cx_CV_L_Value, P3K_CALIBRATION_BAR.CxCV);
+			}
+
+			Acess_FPGA(FPGA_VON_H, 0);
+			Acess_FPGA(FPGA_VON_L, 0);
+
+			Acess_FPGA(FPGA_XH_OS_Ref, P3K_CALIBRATION_BAR.PSensor.XH_Value);
+			Acess_FPGA(FPGA_YH_OS_Ref, P3K_CALIBRATION_BAR.PSensor.YH_Value);
+			Acess_FPGA(FPGA_ZH_OS_Ref, P3K_CALIBRATION_BAR.PSensor.ZH_Value);
+			Acess_FPGA(FPGA_XL_OS_Ref, P3K_CALIBRATION_BAR.PSensor.XL_Value);
+			Acess_FPGA(FPGA_YL_OS_Ref, P3K_CALIBRATION_BAR.PSensor.YL_Value);
+			Acess_FPGA(FPGA_ZL_OS_Ref, P3K_CALIBRATION_BAR.PSensor.ZL_Value);
+
+			Acess_FPGA(FPGA_CX_H_OPP,  Default_Cal_Prot_DA_Normal);
+			Acess_FPGA(FPGA_CX_M_OPP,  Default_Cal_Prot_DA_Normal);
+			Acess_FPGA(FPGA_CX_L_OPP,  Default_Cal_Prot_DA_Normal);
+
+			Acess_FPGA(FPGA_CX_H_CPP,  Default_Cal_Prot_DA_Rating);
+			Acess_FPGA(FPGA_CX_M_CPP,  Default_Cal_Prot_DA_Rating);
+			Acess_FPGA(FPGA_CX_L_CPP,  Default_Cal_Prot_DA_Rating);
+
+			Acess_FPGA(FPGA_CX_H_ROCP, Default_Cal_Prot_DA_Rating);
+			Acess_FPGA(FPGA_CX_M_ROCP, Default_Cal_Prot_DA_Rating);
+			Acess_FPGA(FPGA_CX_L_ROCP, Default_Cal_Prot_DA_Rating);
+
+			Acess_FPGA(FPGA_CX_H_OCP,  Default_Cal_Prot_DA_Normal);
+			Acess_FPGA(FPGA_CX_M_OCP,  Default_Cal_Prot_DA_Normal);
+			Acess_FPGA(FPGA_CX_L_OCP,  Default_Cal_Prot_DA_Normal);
+
+			Acess_FPGA(FPGA_On_Off_Reference_Setting, P_Sense |Acquire_Cont |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode |Set_Load_OFF);			
+			break;
+		case Cal_FPGA_PSensor_L: 	/*  P Sense Low Calibration */
+			Circuit_SW0 = I_Calibration_Circuit_Switch_Control[(CC_MODE*6) + (IRange_Low*2) + 0];
+			Circuit_SW1 = I_Calibration_Circuit_Switch_Control[(CC_MODE*6) + (IRange_Low*2) + 1];
+			
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_0, Circuit_SW0 |VM_Range);
+			Acess_FPGA(FPGA_H_Circuit_Switch_Control_1, Circuit_SW1 |CC_CR_CP_Response_1_10|SlewRate_L_Range);
+			
+			Cal_XYZ_Sensor(PSense_Z,IRange_Low);
+			Cal_XYZ_Sensor(PSense_X,IRange_Low);
+			Cal_XYZ_Sensor(PSense_Y,IRange_Low);
+			Acess_FPGA(FPGA_On_Off_Reference_Setting,Set_Normal_P_Sense_Operation |Set_Protection_Ref_Adjust_ON |Set_Cx_Mode );
+			break;
+		default:
+			break;
+	}
+}
+
+void WriteFlashFun(void)
+{
+	WORD i;	
+	if(TX_LIST.ADDRH==0x40)			/* Erase Flash */
+	{
+		TXData[1] = 4;
+		TXData[2] = TX_LIST.ADDRH;
+		TXData[3] = 1;
+	}
+	else
+	{
+
+	}
+}
+
+void WriteSEQDataToFPGA(void)
+{
+	UWORD i;
+	UBYTE _pause_flag =0; //Adam_3 0927 
+	
+	/*Write Prog Data To FPGA*/
+	Acess_FPGA(FPGA_Control,			Clear_Write_Address);
+	Acess_FPGA(FPGA_Seq_Start_Address,	Prog_Seq_Data.Start_Address);
+
+    for(i=0 ; i<Prog_Seq_Data.Setting_Count ; i++)    
+	{
+		if((Prog_Seq_Data.FPGA_Seq_Data[i].CS1_Setting)& PAUSE_ON)
+			_pause_flag = 1; //Adam_3 0927 
+			
+		Acess_FPGA(FPGA_Seq_Load_On_Setting,	Prog_Seq_Data.FPGA_Seq_Data[i].Level_Setting);
+		Acess_FPGA(FPGA_Seq_Slew_Rate,			Prog_Seq_Data.FPGA_Seq_Data[i].SR_Setting);
+		Acess_FPGA(FPGA_Seq_Circuit_Switch_0,	Prog_Seq_Data.FPGA_Seq_Data[i].CS0_Setting);
+		Acess_FPGA(FPGA_Seq_Circuit_Switch_1,	Prog_Seq_Data.FPGA_Seq_Data[i].CS1_Setting);
+		Acess_FPGA(FPGA_Seq_Duration_Time,		Prog_Seq_Data.FPGA_Seq_Data[i].Duration_Setting);
+		Acess_FPGA(FPGA_Seq_Ramp_Delta_VH,		Prog_Seq_Data.FPGA_Seq_Data[i].Ramp_Delta_VH);
+		Acess_FPGA(FPGA_Seq_Ramp_Delta_VL,		Prog_Seq_Data.FPGA_Seq_Data[i].Ramp_Delta_VL);
+		Acess_FPGA(FPGA_Seq_Ramp_Delta_T,		Prog_Seq_Data.FPGA_Seq_Data[i].Ramp_Delta_T);
+	}
+	
+	if(Prog_Seq_Data.Setting_Count)
+	{
+		for(i=0 ; i<16 ; i++)
+		{
+			Acess_FPGA(FPGA_Jump_Point_Address,	Prog_Seq_Data.P3k_FPGA_Jump_Data[i].Jump_Address);
+			Acess_FPGA(FPGA_Write_JP_Counter,	Prog_Seq_Data.P3k_FPGA_Jump_Data[i].Jump_Number);
+			Acess_FPGA(FPGA_Jump_Ramp_SlewRate,	Prog_Seq_Data.P3k_FPGA_Jump_Data[i].Ramp_SlewRate);
+			Acess_FPGA(FPGA_Jump_Ramp_CS1,		Prog_Seq_Data.P3k_FPGA_Jump_Data[i].Ramp_CS1);
+			Acess_FPGA(FPGA_Jump_Ramp_Delta_VH,	Prog_Seq_Data.P3k_FPGA_Jump_Data[i].Ramp_Delta_VH);
+			Acess_FPGA(FPGA_Jump_Ramp_Delta_VL,	Prog_Seq_Data.P3k_FPGA_Jump_Data[i].Ramp_Delta_VL);
+		}
+	}
+	
+	if(_pause_flag) 
+		Acess_FPGA(FPGA_External_Applied_Operation_Control,Set_Parallel_Ext_Trig_Input_ON); //Adam_3 0927
+
+}
+
+void PlaceFSeqMemory(void)
+{
+	double Cal_Gain,Cal_Offset;
+	UBYTE Memory_Mode,Memory_IRange,Memory_VRange;
+	UWORD LoadON_Value,LoadOFF_Value,Memory_SlewRate,Memory_SR_Setting;
+	UWORD i,Response_Setting,Memory_Time_Unit = 0;
+	P3k_FPGA_Seq_Str	*FPGA_Seq_Ptr;
+	P3k_Data_Str		*Data_tmp = &P3k_Chan_Data;
+	Prog_Seq_Data.Setting_Count = 0;
+
+	if(P3k_FSeq_Data.FSeq_Loop!=1)
+	{
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Address = 0;
+		if(0==P3k_FSeq_Data.FSeq_Loop)		
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Number = 0;
+		else							
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Number = P3k_FSeq_Data.FSeq_Loop - 1;
+	}
+	
+	if(0==P3k_FSeq_Data.FSeq_TB_Range)		
+		Memory_Time_Unit = Time_Unit_1uS;
+	else								
+		Memory_Time_Unit = Time_Unit_10uS;
+	
+	for(i=0 ; i<P3k_FSeq_Data.FSeq_Max_Step+1 ; i++ )
+	{
+		Memory_Mode 	= P3k_FSeq_Data.FSeq_Mode;
+		Memory_VRange	= P3k_FSeq_Data.FSeq_Range/3;
+		Memory_IRange	= P3k_FSeq_Data.FSeq_Range%3;
+		
+		FPGA_Seq_Ptr = &Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count++];
+		FPGA_Seq_Ptr->SEQ_Mode	= P3k_FSeq_Data.FSeq_Mode;
+		FPGA_Seq_Ptr->SEQ_Range	= P3k_FSeq_Data.FSeq_Range;
+		Response_Setting = Response_Select(Memory_Mode,P3k_Chan_Data.CONF.Response);
+		switch(Memory_Mode)
+		{
+			default:
+				Debug_printf("PlaceFSeqMemory Error\n");
+			case CC_MODE:
+				Cal_Gain			= p3k_Cal_data.CC_Data[Memory_IRange].Cal_Value_Gain;
+				Cal_Offset			= p3k_Cal_data.CC_Data[Memory_IRange].Cal_Value_Offset;
+				LoadON_Value		= P3k_FSeq_Data.FSeq_Step[i].FSeq_Value; 
+				LoadOFF_Value		= (ptrMODEL_TYPE->CC)[0+(Memory_IRange*10)].Min;
+				//Memory_SlewRate 	= (ptrMODEL_TYPE->CC)[2+(Memory_IRange*10)].Max * 20;
+				//Memory_SR_Setting	= SlewRate_H_Range;
+				Memory_SlewRate 	= Data_tmp->CC.STA[Memory_IRange].SLEWRATEUP * 20;
+				Memory_SR_Setting	= Data_tmp->CC.STA[Memory_IRange].SLEWRATEUP_RANGE;
+				break;
+			case CR_MODE:
+				Cal_Gain			= p3k_Cal_data.CR_Data[Memory_IRange].Cal_Value_Gain;
+				Cal_Offset			= p3k_Cal_data.CR_Data[Memory_IRange].Cal_Value_Offset;
+				LoadON_Value		= P3k_FSeq_Data.FSeq_Step[i].FSeq_Value; 
+				LoadOFF_Value		= (ptrMODEL_TYPE->CR)[0+(Memory_IRange*10)].Min;
+				//Memory_SlewRate 	=((ptrMODEL_TYPE->CR)[2+(Memory_IRange*10)].Max * 20)/10;
+				//Memory_SR_Setting	= SlewRate_H_Range;
+				Memory_SlewRate 	= (Data_tmp->CR.STA[Data_tmp->IRange].SLEWRATEUP * 20)/10;
+				Memory_SR_Setting	= Data_tmp->CR.STA[Data_tmp->IRange].SLEWRATEUP_RANGE;
+				break; 
+		}
+		
+		FPGA_Seq_Ptr->CS0_Setting	= I_Circuit_Switch_Control[(Memory_Mode*6) + (Memory_IRange*2) + 0];
+		FPGA_Seq_Ptr->CS1_Setting	= I_Circuit_Switch_Control[(Memory_Mode*6) + (Memory_IRange*2) + 1];
+
+		FPGA_Seq_Ptr->Duration_Setting = P3k_FSeq_Data.FSeq_Time_Base;
+
+		FPGA_Seq_Ptr->Ramp_Delta_VH 	= 0;
+		FPGA_Seq_Ptr->Ramp_Delta_VL 	= 0;
+		FPGA_Seq_Ptr->Ramp_Delta_T		= 0;
+		
+		if(VRange_Low==Memory_VRange)	
+			FPGA_Seq_Ptr->CS0_Setting |= VM_L_Range;
+
+		FPGA_Seq_Ptr->Level_Step	= LoadON_Value;
+		FPGA_Seq_Ptr->Level_Setting	= Step_To_CNT(FPGA_Seq_Ptr->Level_Step ,Cal_Gain,Cal_Offset);
+
+		FPGA_Seq_Ptr->SR_Setting	= Memory_SlewRate;
+		FPGA_Seq_Ptr->CS1_Setting  |= Memory_SR_Setting | Memory_Time_Unit | Response_Setting;
+		/* Last Setting*/
+		Prog_Seq_Data.FPGA_Seq_Data[1024] = *FPGA_Seq_Ptr;
+		if(P3k_FSeq_Data.FSeq_Last_Load)	
+			Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step = P3k_FSeq_Data.FSeq_Last_Level;
+		else
+			Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step = LoadOFF_Value;
+		Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Setting = Step_To_CNT(Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step,Cal_Gain,Cal_Offset);
+		Prog_Seq_Data.Last_Load_Setting = P3k_FSeq_Data.FSeq_Last_Load;
+
+		if(Switch_ON==P3k_FSeq_Data.FSeq_Step[i].TrigOut_Setting)	FPGA_Seq_Ptr->CS1_Setting |= TrigOut_ON;
+	}
+	
+	if(P3k_FSeq_Data.FSeq_Loop!=1)
+	{
+		Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-1].CS1_Setting |= Jump_ON | Jump_A_Point;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_Delta_VH	= 0;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_Delta_VL	= 0;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_SlewRate	= 0;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_CS1		= 0;
+	}
+	WriteSEQDataToFPGA();
+}
+
+void PlaceNSeqMemory(UWORD Seq_No)
+{
+	double Cal_Gain,Cal_Offset;
+	UBYTE Memory_Mode,Memory_IRange,Memory_VRange;
+	UWORD LoadON_Value,LoadOFF_Value,Memory_SlewRate,Memory_SR_Setting;
+	UWORD Response_Setting,Memory_Time_Unit = 0;
+	UWORD i;
+	ULONG Jump_Setting,Ramp_mS_Time;
+	UWORD Pre_Step,Goal_Step;
+	
+	p3k_Ramp_Str p3k_Ramp_Data;
+	NSeq_Timing_Str		*NSeq_Timing_Ptr;
+	NSeq_Data_Str		*NSeq_Data_Ptr;
+	P3k_FPGA_Seq_Str	*FPGA_Seq_Ptr;
+	P3k_Data_Str		*Data_tmp = &P3k_Chan_Data;
+
+	NSeq_Timing_Ptr = &P3k_NSeq_Data.NSeq_Seq[Seq_No];
+	if(NSeq_Timing_Ptr->NSeq_Loop!=1)
+	{
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Jump_Address	= Prog_Seq_Data.Setting_Count;
+		if(0==NSeq_Timing_Ptr->NSeq_Loop)	
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Jump_Number = 0;
+		else
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Jump_Number = NSeq_Timing_Ptr->NSeq_Loop - 1;
+	}
+	
+	for(i=0 ; i<NSeq_Timing_Ptr->NSeq_Max_Step ; i++ )
+	{
+		NSeq_Data_Ptr	= &P3k_NSeq_Data.NSeq_Step[Seq_No][i+1];
+
+		Memory_Mode 	= NSeq_Timing_Ptr->NSeq_Mode;
+		Memory_VRange	= NSeq_Timing_Ptr->NSeq_Range / 3;
+		Memory_IRange	= NSeq_Timing_Ptr->NSeq_Range % 3;
+
+		FPGA_Seq_Ptr = &Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count++];
+		FPGA_Seq_Ptr->SEQ_Mode	= NSeq_Timing_Ptr->NSeq_Mode;
+		FPGA_Seq_Ptr->SEQ_Range	= NSeq_Timing_Ptr->NSeq_Range;
+
+		Response_Setting = Response_Select(Memory_Mode,P3k_Chan_Data.CONF.Response);
+		
+		switch(Memory_Mode)
+		{
+			default:
+				Debug_printf("PlaceNSeqMemory Error\n");
+			case CC_MODE:
+				Cal_Gain			= p3k_Cal_data.CC_Data[Memory_IRange].Cal_Value_Gain;
+				Cal_Offset			= p3k_Cal_data.CC_Data[Memory_IRange].Cal_Value_Offset;
+				LoadON_Value		= NSeq_Data_Ptr->NSeq_Value;
+				LoadOFF_Value		= (ptrMODEL_TYPE->CC)[0+(Memory_IRange*10)].Min;
+				Memory_SlewRate 	= Data_tmp->CC.STA[Memory_IRange].SLEWRATEUP * 20;
+				Memory_SR_Setting	= Data_tmp->CC.STA[Memory_IRange].SLEWRATEUP_RANGE;
+				break;
+			case CR_MODE:
+				Cal_Gain			= p3k_Cal_data.CR_Data[Memory_IRange].Cal_Value_Gain;
+				Cal_Offset			= p3k_Cal_data.CR_Data[Memory_IRange].Cal_Value_Offset;
+				LoadON_Value		= NSeq_Data_Ptr->NSeq_Value;
+				LoadOFF_Value		= (ptrMODEL_TYPE->CR)[0+(Memory_IRange*10)].Min;
+				Memory_SlewRate 	= (Data_tmp->CR.STA[Data_tmp->IRange].SLEWRATEUP * 20)/10;
+				Memory_SR_Setting	= Data_tmp->CR.STA[Data_tmp->IRange].SLEWRATEUP_RANGE;
+				break;
+			case CV_MODE:
+				Cal_Gain			= p3k_Cal_data.CV_Data[Memory_VRange].Cal_Value_Gain;
+				Cal_Offset			= p3k_Cal_data.CV_Data[Memory_VRange].Cal_Value_Offset;
+				LoadON_Value		= NSeq_Data_Ptr->NSeq_Value;
+				LoadOFF_Value		= (ptrMODEL_TYPE->CV)[0+Memory_VRange*3].Max;
+				Memory_SR_Setting	= SlewRate_L_Range;
+				if(Memory_VRange)
+					Memory_SlewRate = 600;
+				else
+				{
+					Memory_SlewRate = 6000;
+					Response_Setting |= CV_Response_L;
+				}
+				break;
+			case CP_MODE:
+				Cal_Gain			= p3k_Cal_data.CP_Data[Memory_IRange].Cal_Value_Gain;
+				Cal_Offset			= p3k_Cal_data.CP_Data[Memory_IRange].Cal_Value_Offset;
+				LoadON_Value		= NSeq_Data_Ptr->NSeq_Value;
+				LoadOFF_Value		= (ptrMODEL_TYPE->CP)[0+(Memory_IRange*10)].Min;
+				Memory_SlewRate 	= CP_SR_CNT;
+				Memory_SR_Setting	= CP_SR_Range;
+				break;
+		}	
+		
+		FPGA_Seq_Ptr->CS0_Setting	= I_Circuit_Switch_Control[(Memory_Mode*6) + (Memory_IRange*2) + 0];
+		FPGA_Seq_Ptr->CS1_Setting	= I_Circuit_Switch_Control[(Memory_Mode*6) + (Memory_IRange*2) + 1];
+		FPGA_Seq_Ptr->SEQ_Time		= NSeq_Data_Ptr->NSeq_Time;
+		
+		Ramp_mS_Time = NSeq_Data_Ptr->NSeq_Time.Hour*60*60*1000 + NSeq_Data_Ptr->NSeq_Time.Minute*60*1000 + NSeq_Data_Ptr->NSeq_Time.Second*1000 + NSeq_Data_Ptr->NSeq_Time.MilliSecond;
+		/*
+		1uS			~ 	60mS		1uS
+		60mS		~ 	600mS 		10uS
+		600mS		~ 	6S			100uS
+		6S			~	1min		1mS
+		1min		~ 	100min		100mS
+		100min		~ 	1000min		1S
+		1000min 		~	10000min	10S
+		10000min	~ 	1000H 		1min
+		*/
+		if(Ramp_mS_Time>10000*60*1000)	/* 10000 Minute ~ 1000 Hour */
+		{
+			Memory_Time_Unit = Time_Unit_1min;
+			FPGA_Seq_Ptr->Duration_Setting = NSeq_Data_Ptr->NSeq_Time.Hour*60 + NSeq_Data_Ptr->NSeq_Time.Minute;
+		}
+		else if(Ramp_mS_Time>1000*60*1000)	/* 1000 Minute ~ 10000 Minute	*/
+		{
+			Memory_Time_Unit = Time_Unit_10S;
+			FPGA_Seq_Ptr->Duration_Setting = (NSeq_Data_Ptr->NSeq_Time.Hour*60*60 + NSeq_Data_Ptr->NSeq_Time.Minute*60 + NSeq_Data_Ptr->NSeq_Time.Second)/10;
+		}
+		else if(Ramp_mS_Time>100*60*1000)	/* 100 Minute ~1000 Minute	*/
+		{
+			Memory_Time_Unit = Time_Unit_1S;
+			FPGA_Seq_Ptr->Duration_Setting = NSeq_Data_Ptr->NSeq_Time.Hour*60*60 + NSeq_Data_Ptr->NSeq_Time.Minute*60 + NSeq_Data_Ptr->NSeq_Time.Second;
+		}
+		else if(Ramp_mS_Time>1*60*1000) /* 1 Minute ~ 100 Minute	*/
+		{
+			Memory_Time_Unit = Time_Unit_100mS;
+			FPGA_Seq_Ptr->Duration_Setting = (NSeq_Data_Ptr->NSeq_Time.Hour*60*60*1000 + NSeq_Data_Ptr->NSeq_Time.Minute*60*1000 + NSeq_Data_Ptr->NSeq_Time.Second*1000 + NSeq_Data_Ptr->NSeq_Time.MilliSecond)/100;
+		}
+		else if(Ramp_mS_Time>6000)		/* 6 Second ~ 1 Minute	*/
+		{
+			Memory_Time_Unit = Time_Unit_1mS;
+			FPGA_Seq_Ptr->Duration_Setting = NSeq_Data_Ptr->NSeq_Time.Minute*60*1000 + NSeq_Data_Ptr->NSeq_Time.Second*1000 + NSeq_Data_Ptr->NSeq_Time.MilliSecond;
+		}
+		else if(Ramp_mS_Time>600)		/* 600 mS ~ 6 Second	*/
+		{
+			Memory_Time_Unit = Time_Unit_100uS;
+			FPGA_Seq_Ptr->Duration_Setting = (NSeq_Data_Ptr->NSeq_Time.Second*1000*1000 + NSeq_Data_Ptr->NSeq_Time.MilliSecond*1000)/100;
+		}
+		else if(Ramp_mS_Time>60)		/* 60 mS ~ 600 mS	*/
+		{
+			Memory_Time_Unit = Time_Unit_10uS;
+			FPGA_Seq_Ptr->Duration_Setting = (NSeq_Data_Ptr->NSeq_Time.MilliSecond*1000)/10;
+		}
+		else							/* 1 uS ~ 60 mS */
+		{
+			Memory_Time_Unit = Time_Unit_1uS;
+			FPGA_Seq_Ptr->Duration_Setting = NSeq_Data_Ptr->NSeq_Time.MilliSecond*1000;
+		}
+		
+		FPGA_Seq_Ptr->Ramp_Delta_VH 	= 0;
+		FPGA_Seq_Ptr->Ramp_Delta_VL 	= 0;
+		FPGA_Seq_Ptr->Ramp_Delta_T		= 0;
+		
+		if(VRange_Low==Memory_VRange)	
+			FPGA_Seq_Ptr->CS0_Setting |= VM_L_Range;
+
+		if(LOADON_MODE==NSeq_Data_Ptr->Load_Setting)	
+			FPGA_Seq_Ptr->Level_Step = LoadON_Value;
+		else/*LOADOFF_MODE*/							
+			FPGA_Seq_Ptr->Level_Step = LoadOFF_Value;
+		
+		FPGA_Seq_Ptr->Level_Setting = Step_To_CNT(FPGA_Seq_Ptr->Level_Step ,Cal_Gain,Cal_Offset);
+
+		FPGA_Seq_Ptr->SR_Setting	= Memory_SlewRate;
+		FPGA_Seq_Ptr->CS1_Setting  |= Memory_SR_Setting | Memory_Time_Unit | Response_Setting;
+		/* Last Setting*/		
+		Prog_Seq_Data.FPGA_Seq_Data[1024] = *FPGA_Seq_Ptr;
+		if(NSeq_Timing_Ptr->NSeq_Last_Load)		
+			Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step = NSeq_Timing_Ptr->NSeq_Last_Level;
+		else									
+			Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step = LoadOFF_Value;
+		Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Setting = Step_To_CNT(Prog_Seq_Data.FPGA_Seq_Data[1024].Level_Step,Cal_Gain,Cal_Offset);
+		Prog_Seq_Data.Last_Load_Setting = NSeq_Timing_Ptr->NSeq_Last_Load;
+
+		if(Switch_ON == NSeq_Data_Ptr->Ramp_Setting)
+		{
+			if((Prog_Seq_Data.Setting_Count == 1)||((Prog_Seq_Data.Setting_Count>1)&&((FPGA_Seq_Ptr->SEQ_Mode!=(FPGA_Seq_Ptr-1)->SEQ_Mode)||(FPGA_Seq_Ptr->SEQ_Range!=(FPGA_Seq_Ptr-1)->SEQ_Range))))
+			{
+				if(CV_MODE==Memory_Mode)	
+					Pre_Step = ((ptrMODEL_TYPE->CV)[0].Def*1.1);
+				else
+				{
+					if(Memory_IRange == Mid_RANGE)
+						Pre_Step = Min_Startup_Setting_M;
+					else
+						Pre_Step = Min_Startup_Setting_H_L;
+				}
+			}
+			else
+				Pre_Step = (FPGA_Seq_Ptr-1)->Level_Step;
+			
+			Goal_Step = FPGA_Seq_Ptr->Level_Step;
+			p3k_Ramp_Data = Seq_Ramp_Process(Memory_Mode,Memory_IRange,Memory_VRange,Function_Static,Pre_Step,Goal_Step,NSeq_Data_Ptr->NSeq_Time);
+			Memory_Time_Unit	= p3k_Ramp_Data.Delta_TimeBase;
+			Memory_SlewRate		= p3k_Ramp_Data.Delta_SR_Set;
+			Memory_SR_Setting	= p3k_Ramp_Data.Delta_SR_Base;
+			Response_Setting	= p3k_Ramp_Data.Delta_Response;
+			FPGA_Seq_Ptr->Ramp_Delta_VH	= p3k_Ramp_Data.Delta_Value_High;
+			FPGA_Seq_Ptr->Ramp_Delta_VL	= p3k_Ramp_Data.Delta_Value_Low;
+			FPGA_Seq_Ptr->Ramp_Delta_T	= p3k_Ramp_Data.DeltaTime;
+			FPGA_Seq_Ptr->Ramp_Delta_T |= Enable_Ramp;
+
+			FPGA_Seq_Ptr->SR_Setting	= Memory_SlewRate;
+			FPGA_Seq_Ptr->CS1_Setting	= I_Circuit_Switch_Control[(Memory_Mode*6) + (Memory_IRange*2) + 1];
+			FPGA_Seq_Ptr->CS1_Setting  |= Memory_SR_Setting | Memory_Time_Unit | Response_Setting;
+		}
+
+		if(Switch_ON==NSeq_Data_Ptr->TrigOut_Setting)	
+			FPGA_Seq_Ptr->CS1_Setting |= TrigOut_ON;
+		
+		if(Switch_ON==NSeq_Data_Ptr->Pause_Setting)		
+			FPGA_Seq_Ptr->CS1_Setting |= PAUSE_ON;
+	}
+
+	if(NSeq_Timing_Ptr->NSeq_Loop!=1)
+	{
+		Jump_Setting = Prog_Seq_Data.Jump_Count << 9;
+		Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-1].CS1_Setting |= Jump_ON | Jump_Setting;
+		
+		Pre_Step = FPGA_Seq_Ptr->Level_Step;
+		Goal_Step= Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Jump_Address].Level_Step;
+		p3k_Ramp_Data = Seq_Ramp_Process(Memory_Mode,Memory_IRange,Memory_VRange,Function_Static,Pre_Step,Goal_Step,P3k_NSeq_Data.NSeq_Step[Seq_No][1].NSeq_Time);
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Ramp_Delta_VH	= p3k_Ramp_Data.Delta_Value_High;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Ramp_Delta_VL	= p3k_Ramp_Data.Delta_Value_Low;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Ramp_SlewRate	= p3k_Ramp_Data.Delta_SR_Set;
+		Memory_Time_Unit	= p3k_Ramp_Data.Delta_TimeBase;
+		Memory_SR_Setting	= p3k_Ramp_Data.Delta_SR_Base;
+		Response_Setting	= p3k_Ramp_Data.Delta_Response;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Ramp_CS1 = I_Circuit_Switch_Control[(Memory_Mode*6) + (Memory_IRange*2) + 1];
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[Prog_Seq_Data.Jump_Count].Ramp_CS1 = Memory_SR_Setting | Memory_Time_Unit | Response_Setting;
+		Prog_Seq_Data.Jump_Count++;
+	}
+}
+
+void PlaceProgMemory(UWORD Input_MODE,UBYTE Memory_No,UWORD Run_Time)
+{
+	/*Input_MODE = 0, Short 	*/
+	/*Input_MODE = 1, LOAD ON	*/
+	/*Input_MODE = 2, LOAD OFF	*/
+	double Cal_Gain,Cal_Offset;
+	UBYTE Memory_VRange;
+	UWORD LoadON_Value   ,LoadOFF_Value   ,Short_Value;
+	UWORD LoadON_SlewRate,LoadOFF_SlewRate,Short_SlewRate;
+	UWORD LoadON_SR_Range,LoadOFF_SR_Range,Short_SR_Range;
+	UWORD Response_Setting;
+	P3k_Memory_Str	 *Memory_Ptr;
+	P3k_FPGA_Seq_Str *FPGA_Seq_Ptr;
+	
+	FPGA_Seq_Ptr = &Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count++];
+	Memory_Ptr	 = &P3k_Chan_Data.M_DATA[Memory_No];
+	
+	if(Memory_Ptr->STATUS&0x40)
+		Memory_VRange = VRange_High;
+	else						
+		Memory_VRange = VRange_Low;
+	
+	FPGA_Seq_Ptr->SEQ_Mode	= Memory_Ptr->MODE;
+	FPGA_Seq_Ptr->SEQ_Range	= Memory_Ptr->IRange + Memory_VRange*3;
+
+	Response_Setting = Response_Select(Memory_Ptr->MODE,P3k_Chan_Data.CONF.Response);
+	
+	switch(Memory_Ptr->MODE)
+	{
+		default:/*CC_MODE:*/
+			Debug_printf("PlaceProgMemory Error\n");
+		case CC_MODE:
+			Cal_Gain		= p3k_Cal_data.CC_Data[Memory_Ptr->IRange].Cal_Value_Gain;
+			Cal_Offset		= p3k_Cal_data.CC_Data[Memory_Ptr->IRange].Cal_Value_Offset;
+			LoadON_Value	= Memory_Ptr->VALUE1;
+			LoadON_SlewRate	= Memory_Ptr->SLEWRATEUP * 20;
+			LoadON_SR_Range	= Memory_Ptr->SLEWRATEUP_RANGE;
+
+			LoadOFF_Value	= (ptrMODEL_TYPE->CC)[0+(Memory_Ptr->IRange*10)].Min;
+			LoadOFF_SlewRate= Memory_Ptr->SLEWRATEUP * 20;
+			LoadOFF_SR_Range= Memory_Ptr->SLEWRATEUP_RANGE;
+
+			Short_Value		= (ptrMODEL_TYPE->CC)[0+(Memory_Ptr->IRange*10)].Max;
+			Short_SlewRate	= (ptrMODEL_TYPE->CC)[2+(Memory_Ptr->IRange*10)].Max * 20;
+			Short_SR_Range	= SlewRate_H_Range;
+			break;
+		case CR_MODE:
+			Cal_Gain		= p3k_Cal_data.CR_Data[Memory_Ptr->IRange].Cal_Value_Gain;
+			Cal_Offset		= p3k_Cal_data.CR_Data[Memory_Ptr->IRange].Cal_Value_Offset;
+			LoadON_Value	= Memory_Ptr->VALUE1;
+			LoadON_SlewRate	= (Memory_Ptr->SLEWRATEUP * 20)/10;
+			LoadON_SR_Range	= Memory_Ptr->SLEWRATEUP_RANGE;
+
+			LoadOFF_Value	= (ptrMODEL_TYPE->CR)[0+(Memory_Ptr->IRange*10)].Min;
+			LoadOFF_SlewRate= (Memory_Ptr->SLEWRATEUP * 20)/10;
+			LoadOFF_SR_Range= Memory_Ptr->SLEWRATEUP_RANGE;
+
+			Short_Value		= (ptrMODEL_TYPE->CR)[0+(Memory_Ptr->IRange*10)].Max;
+			Short_SlewRate	= ((ptrMODEL_TYPE->CR)[2+(Memory_Ptr->IRange*10)].Max * 20)/10;
+			Short_SR_Range	= SlewRate_H_Range;
+			break;
+		case CV_MODE:
+			Cal_Gain		= p3k_Cal_data.CV_Data[Memory_VRange].Cal_Value_Gain;
+			Cal_Offset		= p3k_Cal_data.CV_Data[Memory_VRange].Cal_Value_Offset;
+			
+			LoadON_Value	= Memory_Ptr->VALUE1;
+			LoadOFF_Value	= (ptrMODEL_TYPE->CV)[0+Memory_VRange*3].Max;
+			Short_Value		= (ptrMODEL_TYPE->CV)[0+Memory_VRange*3].Min;
+
+			if(Memory_VRange)
+				LoadON_SlewRate = LoadOFF_SlewRate = Short_SR_Range = 600;
+			else
+			{
+				LoadON_SlewRate = LoadOFF_SlewRate = Short_SR_Range = 6000;
+				Response_Setting |= CV_Response_L;
+			}
+			LoadON_SR_Range = LoadOFF_SR_Range = Short_SR_Range = SlewRate_L_Range;
+			break;
+		case CP_MODE:
+			Cal_Gain		= p3k_Cal_data.CP_Data[Memory_Ptr->IRange].Cal_Value_Gain;
+			Cal_Offset		= p3k_Cal_data.CP_Data[Memory_Ptr->IRange].Cal_Value_Offset;					
+			LoadON_Value	= Memory_Ptr->VALUE1;
+
+			LoadOFF_Value	= (ptrMODEL_TYPE->CP)[0+(Memory_Ptr->IRange*10)].Min;
+
+			Short_Value		= (ptrMODEL_TYPE->CP)[0+(Memory_Ptr->IRange*10)].Max;
+			LoadON_SlewRate	= LoadOFF_SlewRate = Short_SlewRate	= CP_SR_CNT;
+			LoadON_SR_Range = LoadOFF_SR_Range = Short_SR_Range = CP_SR_Range;
+			break;
+	}	
+	FPGA_Seq_Ptr->CS0_Setting 		= I_Circuit_Switch_Control[(Memory_Ptr->MODE*6) + (Memory_Ptr->IRange*2) + 0];
+	FPGA_Seq_Ptr->CS1_Setting 		= I_Circuit_Switch_Control[(Memory_Ptr->MODE*6) + (Memory_Ptr->IRange*2) + 1];
+	FPGA_Seq_Ptr->Duration_Setting	= Run_Time*100; /*Time Resolution = 100mS*/
+	FPGA_Seq_Ptr->Ramp_Delta_VH		= 0;
+	FPGA_Seq_Ptr->Ramp_Delta_VL		= 0;
+	FPGA_Seq_Ptr->Ramp_Delta_T		= 0;
+	
+	if(VRange_Low==Memory_VRange)	
+		FPGA_Seq_Ptr->CS0_Setting |= VM_L_Range;
+
+	if(SHORT_MODE==Input_MODE)
+	{
+		FPGA_Seq_Ptr->Level_Step	= Short_Value;
+		FPGA_Seq_Ptr->Level_Setting = Step_To_CNT(Short_Value,Cal_Gain,Cal_Offset);
+		FPGA_Seq_Ptr->SR_Setting	= Short_SlewRate;
+		FPGA_Seq_Ptr->CS1_Setting  |= Short_SR_Range | Time_Unit_1mS | Response_Setting;
+	}
+	else if(LOADON_MODE==Input_MODE)
+	{
+		FPGA_Seq_Ptr->Level_Step	= LoadON_Value;
+		FPGA_Seq_Ptr->Level_Setting = Step_To_CNT(LoadON_Value,Cal_Gain,Cal_Offset);
+		FPGA_Seq_Ptr->SR_Setting	= LoadON_SlewRate;
+		FPGA_Seq_Ptr->CS1_Setting  |= LoadON_SR_Range | Time_Unit_1mS | Response_Setting;
+	}
+	else/*LOADOFF_MODE*/
+	{
+		FPGA_Seq_Ptr->Level_Step	= LoadOFF_Value;
+		FPGA_Seq_Ptr->Level_Setting = Step_To_CNT(LoadOFF_Value,Cal_Gain,Cal_Offset);
+		FPGA_Seq_Ptr->SR_Setting	= LoadOFF_SlewRate;
+		FPGA_Seq_Ptr->CS1_Setting  |= LoadOFF_SR_Range | Time_Unit_1mS | Response_Setting;
+		/* Last Setting*/
+		Prog_Seq_Data.FPGA_Seq_Data[1024] = *FPGA_Seq_Ptr;
+		Prog_Seq_Data.Last_Load_Setting = Switch_OFF;
+	}
+}
+
+void PlaceNSeqStep(void)
+{
+	UBYTE Goal_Mode,Goal_IRange,Goal_VRange;
+	UBYTE Pre_Mode,Pre_IRange,Pre_VRange;
+	UWORD Goal_Step,Pre_Step;
+	UWORD i;  //ADAM 0911
+	p3k_Ramp_Str p3k_Ramp_Data;
+	UWORD Prog_No_Temp = 99;
+
+	P3k_FPGA_Seq_Str *FPGA_Seq_Ptr;
+	
+	Prog_Seq_Data.Setting_Count	= 0;
+	Prog_Seq_Data.Jump_Count	= 1;
+	
+	for(i=0 ; i<Prog_Seq_Data.Total_Count ; i++)
+	{
+		if(Prog_Seq_Data.D_Loop_Count==i)
+		{
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Address	= Prog_Seq_Data.Setting_Count;
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Number	= 0;
+		}
+		
+		if(Prog_No_Temp!=Prog_Seq_Data.Prog_Disp_Data[i].Prog_No)
+		{
+			Prog_No_Temp = Prog_Seq_Data.Prog_Disp_Data[i].Prog_No;
+			PlaceNSeqMemory(Prog_No_Temp);
+		}
+		
+		if(P3k_NSeq_Data.NSeq_Seq[Prog_No_Temp].NSeq_Loop==1)	
+			Prog_Seq_Data.Prog_Disp_Data[i].Loop_Address = 0;
+		else												
+			Prog_Seq_Data.Prog_Disp_Data[i].Loop_Address = Prog_Seq_Data.Jump_Count - 1;
+	}
+	
+	if( (Prog_Seq_Data.D_Loop_Count!=2000)&&(Prog_Seq_Data.Setting_Count) )
+	{
+		FPGA_Seq_Ptr = &Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count];
+		*FPGA_Seq_Ptr = *(FPGA_Seq_Ptr-1);
+		FPGA_Seq_Ptr->CS1_Setting |= Jump_ON;
+		FPGA_Seq_Ptr->CS1_Setting &= 0xE1FF;		/*Use Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Address and Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Number*/
+		FPGA_Seq_Ptr->CS1_Setting &= ~TrigOut_ON;
+		FPGA_Seq_Ptr->CS1_Setting &= ~PAUSE_ON;
+		FPGA_Seq_Ptr->CS1_Setting &= 0x3FFF;		/*Time_Unit_1uS*/
+		FPGA_Seq_Ptr->Duration_Setting = 0;
+
+		FPGA_Seq_Ptr = &Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Address];
+
+		Goal_Mode 	= FPGA_Seq_Ptr->SEQ_Mode;
+		Goal_VRange	= FPGA_Seq_Ptr->SEQ_Range/3;
+		Goal_IRange	= FPGA_Seq_Ptr->SEQ_Range%3;
+		Goal_Step	= FPGA_Seq_Ptr->Level_Step;
+
+		FPGA_Seq_Ptr = &Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-1];
+
+		Pre_Mode	= FPGA_Seq_Ptr->SEQ_Mode;
+		Pre_VRange	= FPGA_Seq_Ptr->SEQ_Range/3;
+		Pre_IRange	= FPGA_Seq_Ptr->SEQ_Range%3;
+		Pre_Step	= FPGA_Seq_Ptr->Level_Step;
+
+		if( (Pre_Mode!=Goal_Mode)||(Pre_VRange!=Goal_VRange)||(Pre_IRange!=Goal_IRange) )
+		{
+			if(CV_MODE==Pre_Mode)	
+				Pre_Step = ((ptrMODEL_TYPE->CV)[0].Def*1.1);
+			else
+			{
+				if(Pre_IRange == Mid_RANGE)
+					Pre_Step = Min_Startup_Setting_M;
+				else
+					Pre_Step = Min_Startup_Setting_H_L;
+			}
+		}
+
+		p3k_Ramp_Data = Seq_Ramp_Process(Goal_Mode,Goal_IRange,Goal_VRange,Function_Static,Pre_Step,Goal_Step,FPGA_Seq_Ptr->SEQ_Time);
+		
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_Delta_VH	= p3k_Ramp_Data.Delta_Value_High;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_Delta_VL	= p3k_Ramp_Data.Delta_Value_Low;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_SlewRate	= p3k_Ramp_Data.Delta_SR_Set;
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_CS1		= I_Circuit_Switch_Control[(Goal_Mode*6) + (Goal_IRange*2) + 1];
+		Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Ramp_CS1		= p3k_Ramp_Data.Delta_TimeBase | p3k_Ramp_Data.Delta_SR_Base | p3k_Ramp_Data.Delta_Response;
+		Prog_Seq_Data.Setting_Count++; //adam 0914
+		Prog_Seq_Data.Prog_Disp_Data[Prog_Seq_Data.Total_Count] = Prog_Seq_Data.Prog_Disp_Data[Prog_Seq_Data.Total_Count-1];
+		Prog_Seq_Data.Total_Count++;
+	}
+	WriteSEQDataToFPGA();
+}
+
+void PlaceProgStep(void)
+{
+	//UBYTE i,Prog_Setting,Step_Setting;
+	UBYTE Prog_Setting,Step_Setting;//adam 0913
+	UWORD i; //adam 0913 
+	P3k_Timing_Str		*Timing_Ptr;
+	P3k_Prog_Disp_Str	*Prog_Disp_Ptr;
+	UWORD Time_Setting,Memory_Setting;
+	Prog_Seq_Data.Setting_Count = 0;
+	
+	for(i=0 ;i<Prog_Seq_Data.Total_Count ; i++)
+	{
+		Prog_Disp_Ptr	= &Prog_Seq_Data.Prog_Disp_Data[i];
+		Prog_Setting	= Prog_Disp_Ptr->Prog_No;
+		Step_Setting	= Prog_Disp_Ptr->Step_No;
+		Timing_Ptr		= &p3k_Chan_PROG.Timing_Data[Prog_Setting];
+		Memory_Setting	= Timing_Ptr->MEMORY[Step_Setting];
+
+		if( Prog_Seq_Data.D_Loop_Count==i )
+		{
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Address	= Prog_Seq_Data.Setting_Count;
+			Prog_Seq_Data.P3k_FPGA_Jump_Data[0].Jump_Number	= 0;
+		}		
+		/* Short Time */
+		Time_Setting = Timing_Ptr->SHORTTIME[Step_Setting];
+		PlaceProgMemory(SHORT_MODE,Memory_Setting,Time_Setting);
+		
+		/* ON Time */
+		Time_Setting = Timing_Ptr->ONTIME[Step_Setting] - Timing_Ptr->SHORTTIME[Step_Setting];
+		PlaceProgMemory(LOADON_MODE,Memory_Setting,Time_Setting);
+
+		/* OFF Time */
+		Time_Setting = Timing_Ptr->OFFTIME[Step_Setting];
+		PlaceProgMemory(LOADOFF_MODE,Memory_Setting,Time_Setting);
+
+		if( (Manual_MODE==Timing_Ptr->RUNMODE[Step_Setting])&&(Prog_Seq_Data.Setting_Count) )
+		{
+			if(Timing_Ptr->OFFTIME[Step_Setting])		
+				Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-1].CS1_Setting |= PAUSE_ON;
+			else if(Timing_Ptr->ONTIME[Step_Setting])	
+				Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-2].CS1_Setting |= PAUSE_ON;
+			else										
+				Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-3].CS1_Setting |= PAUSE_ON;
+		}
+	}
+
+	if( (Prog_Seq_Data.D_Loop_Count!=2000)&&(Prog_Seq_Data.Setting_Count) )
+		Prog_Seq_Data.FPGA_Seq_Data[Prog_Seq_Data.Setting_Count-1].CS1_Setting |= Jump_ON;
+	WriteSEQDataToFPGA();
+}
+
+void clear_struct_data (unsigned char *pta, int size )  //Adam_2 0919 clear struct data
+{
+	while(size>0)
+	{
+		*pta++ = 0;
+		size --;
+	}
+}
+
+void PlaceNSeqChain(void)
+{
+	UBYTE Seq_Array[10];	/* 0:OFF ,S01~S10 */
+	UBYTE Loop_Item;
+	UBYTE End_Item;
+	UBYTE i; //adam 0914
+	UWORD j; //adam 0914
+	UBYTE Chain_Seq_No;
+	
+	P3k_Prog_Disp_Str	*Prog_Disp_Ptr;
+
+	for(i=0 ;i<10 ; i++)
+		Seq_Array[i] = 0;		/* Initialize Data	*/
+
+	Loop_Item	= 0;
+	End_Item	= 0;
+	
+	clear_struct_data((unsigned char *)&Prog_Seq_Data, sizeof(Prog_Seq_Data));   //Adam_2 0919
+
+	Chain_Seq_No = P3k_NSeq_Data.NSeq_Start + 1;
+
+	for(i=0 ; i<=10 ; i++)
+	{
+		if(Chain_Seq_No)
+		{
+			for(j=0 ;j<i ; j++)
+			{
+				if(Chain_Seq_No==Seq_Array[j])
+				{
+					Loop_Item	= j+1;	/* Loop Seq No */
+					End_Item	= i;	/* End Seq No */
+					break;
+				}
+			}
+			
+			if(End_Item)
+				break;
+			
+			Seq_Array[i] = Chain_Seq_No;			
+			Chain_Seq_No = P3k_NSeq_Data.NSeq_Seq[Chain_Seq_No-1].NSeq_Chain;
+		}
+		else
+		{
+			Loop_Item	= 0;			/* No Loop */
+			End_Item	= i;			/* End Seq No */
+			break;
+		}
+	}
+	
+	Prog_Disp_Ptr	= &Prog_Seq_Data.Prog_Disp_Data[0];
+	Prog_Seq_Data.Total_Count	= 0;
+	Prog_Seq_Data.D_Loop_Count	= 2000;
+	
+	for(i=0 ;i<End_Item ; i++)
+	{
+		if(P3k_NSeq_Data.NSeq_Seq[Seq_Array[i]-1].NSeq_Max_Step)
+		{
+			for(j=0 ; j<P3k_NSeq_Data.NSeq_Seq[Seq_Array[i]-1].NSeq_Max_Step ; j++)
+			{
+				if( (Loop_Item==(i+1))&&(2000==Prog_Seq_Data.D_Loop_Count) )
+					Prog_Seq_Data.D_Loop_Count = Prog_Seq_Data.Total_Count;
+				
+				Prog_Disp_Ptr->Prog_No = Seq_Array[i]-1;
+				Prog_Disp_Ptr->Step_No = j;
+				Prog_Disp_Ptr++;
+				Prog_Seq_Data.Total_Count++;
+			}
+		}
+		else
+		{
+			Seq_Array[i] = 0;
+			if(Loop_Item==(i+1))
+				Loop_Item++;
+		}
+	}
+	PlaceNSeqStep();
+}
+
+void PlaceProgChain(void)
+{
+	UBYTE Prog_Array[16];	/*	0:OFF ,P01~P16 */
+	UBYTE Loop_Item;
+	UBYTE End_Item;
+	UBYTE i,j;
+	UBYTE Chain_Prog_No,Step_Number;
+	P3k_Timing_Str		*Timing_Ptr;
+	P3k_Prog_Disp_Str	*Prog_Disp_Ptr;
+
+	for(i=0 ;i<16 ; i++)
+		Prog_Array[i] = 0;		/* Initialize Data	*/
+	Loop_Item	= 0;
+	End_Item	= 0;
+
+	Chain_Prog_No = p3k_Chan_PROG.Chain_Start_Prog + 1;
+	for(i=0 ; i<16 ; i++)
+	{
+		if(Chain_Prog_No)
+		{
+			for(j=0 ; j<i ; j++)
+			{
+				if(Chain_Prog_No==Prog_Array[j])
+				{
+					Loop_Item	= j+1;	/*Loop Prog No*/
+					End_Item	= i;	/*End Prog No*/
+					break;
+				}
+			}
+			
+			if(End_Item)
+				break;
+			
+			Prog_Array[i] = Chain_Prog_No;
+			Chain_Prog_No = p3k_Chan_PROG.PROGSEQ[Chain_Prog_No-1];
+		}
+		else
+		{
+			Loop_Item	= 0;		/*No Loop*/
+			End_Item	= i;		/*End Prog No*/
+			break;
+		}
+	}
+	
+	Prog_Disp_Ptr = &Prog_Seq_Data.Prog_Disp_Data[0];
+	Prog_Seq_Data.Total_Count	= 0;
+	Prog_Seq_Data.D_Loop_Count	= 2000;
+	
+	for(i=0 ; i<End_Item ; i++)
+	{
+		Timing_Ptr	= &p3k_Chan_PROG.Timing_Data[Prog_Array[i]-1];
+		Step_Number = 0;
+		
+		for(j=0 ; j<16 ; j++)
+		{
+			if(Timing_Ptr->RUNMODE[j]!=Skip_MODE)
+			{
+				if( (Loop_Item==(i+1))&&(2000==Prog_Seq_Data.D_Loop_Count) )
+					Prog_Seq_Data.D_Loop_Count = Prog_Seq_Data.Total_Count; 	
+				
+				Prog_Disp_Ptr->Prog_No				= Prog_Array[i]-1;
+				Prog_Disp_Ptr->Step_No				= j;
+				Prog_Disp_Ptr->Mem_NO				= Timing_Ptr->MEMORY[j];
+				Prog_Disp_Ptr->SPEC_Result			= 0;
+				Prog_Disp_Ptr->SPEC_Result_Backup 	= 0;
+				Prog_Disp_Ptr->PFTIME				= Timing_Ptr->PFTIME[j];
+				Prog_Disp_Ptr++;
+				Prog_Seq_Data.Total_Count++;
+				Step_Number++;
+			}
+		}
+		if(0==Step_Number)
+		{
+			Prog_Array[i] = 0;
+			if(Loop_Item==(i+1))
+				Loop_Item++;
+		}
+	}
+	PlaceProgStep();
+}
